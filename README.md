@@ -55,7 +55,7 @@ name = "MODE"
 value = "prod"                     # 非秘密可直接給預設值
 ```
 
-範例：[`Xense-Bot-rs`](../Xense-Bot-rs) 的 `bot.toml`。
+範例：Xense Bot（Rust 版）的 `bot.toml` —— 一個只吃 `DISCORD_TOKEN`、零依賴的單一 exe。
 
 ## 把別人的 bot 接進來（可整段複製丟給 AI）
 
@@ -93,7 +93,7 @@ value = "prod"                     # 非秘密可直接給預設值
 
 7. 在 README 說明：怎麼 build、需要哪些環境變數、怎麼用 KZ Bot Host「匯入資料夾」接入。
 
-參考範本：Xense-Bot-rs 專案（Rust + serenity、單一 exe、只吃 DISCORD_TOKEN、附 bot.toml），路徑由使用者一併提供。
+如果手上有可參考的範本專案（Rust + serenity、單一 exe、只吃 DISCORD_TOKEN、附 bot.toml），一併提供給我參考。
 ````
 
 接入步驟（你自己操作管家）：
