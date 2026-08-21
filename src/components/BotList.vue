@@ -55,7 +55,7 @@ async function toggleAutostart(bot: BotSpec, ev: Event) {
 }
 
 .row:hover {
-  background: rgba(0, 0, 0, 0.03);
+  background: var(--hover);
 }
 
 .row.active {

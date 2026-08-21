@@ -79,7 +79,7 @@ function hide() {
 
 .actions .active {
   color: var(--text);
-  background: rgba(0, 0, 0, 0.04);
+  background: var(--hover);
 }
 
 .wbtns {
@@ -99,7 +99,7 @@ function hide() {
 }
 
 .wbtn:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--hover);
   color: var(--text);
 }
 

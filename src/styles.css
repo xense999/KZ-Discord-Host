@@ -1,13 +1,48 @@
 :root {
+  /* Dark (default) */
+  --canvas: #1c1c1b;
+  --surface: #232322;
+  --surface-muted: #1f1f1e;
+  --border: #2f2f2d;
+  --border-strong: #3d3d3a;
+  --text: #e7e5e0;
+  --text-muted: #9d9a94;
+  --text-faint: #6d6b66;
+  --ink: #f1efea;
+  --ink-text: #1c1c1b;
+  --ink-hover: #dcd9d2;
+  --hover: rgba(255, 255, 255, 0.05);
+  --switch-off: #4a4a47;
+  --pale-red: #3a2324;
+  --pale-red-text: #e49a97;
+  --pale-blue: #1f2e3a;
+  --pale-blue-text: #8ec3ea;
+  --pale-green: #223226;
+  --pale-green-text: #97cf9f;
+  --pale-yellow: #3a3220;
+  --pale-yellow-text: #e3bd6a;
+  --neutral-chip: #2c2c2a;
+  --font-sans: "Geist Sans", "Helvetica Neue", "Segoe UI Variable Text", "Segoe UI", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  --font-mono: "Geist Mono", "SF Mono", "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+  --radius: 6px;
+  --radius-card: 8px;
+  --radius-window: 12px;
+}
+
+:root[data-theme="light"] {
   --canvas: #f7f6f3;
   --surface: #ffffff;
   --surface-muted: #f9f9f8;
   --border: #eaeaea;
+  --border-strong: #d6d4cf;
   --text: #2f3437;
   --text-muted: #787774;
   --text-faint: #a8a6a1;
   --ink: #111111;
+  --ink-text: #ffffff;
   --ink-hover: #333333;
+  --hover: rgba(0, 0, 0, 0.04);
+  --switch-off: #d9d7d2;
   --pale-red: #fdebec;
   --pale-red-text: #9f2f2d;
   --pale-blue: #e1f3fe;
@@ -16,10 +51,7 @@
   --pale-green-text: #346538;
   --pale-yellow: #fbf3db;
   --pale-yellow-text: #956400;
-  --font-sans: "Geist Sans", "Helvetica Neue", "Segoe UI Variable Text", "Segoe UI", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
-  --font-mono: "Geist Mono", "SF Mono", "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
-  --radius: 6px;
-  --radius-card: 8px;
+  --neutral-chip: #efeeeb;
 }
 
 * {
@@ -31,10 +63,10 @@ body,
 #app {
   height: 100%;
   margin: 0;
+  background: transparent;
 }
 
 body {
-  background: var(--canvas);
   color: var(--text);
   font-family: var(--font-sans);
   font-size: 14px;
@@ -80,7 +112,7 @@ button:disabled {
 
 .btn:hover:not(:disabled) {
   background: var(--surface-muted);
-  border-color: #dcdcd9;
+  border-color: var(--border-strong);
 }
 
 .btn:active:not(:disabled) {
@@ -96,7 +128,7 @@ button:disabled {
 .btn-primary {
   background: var(--ink);
   border-color: var(--ink);
-  color: #ffffff;
+  color: var(--ink-text);
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -120,7 +152,7 @@ button:disabled {
 }
 
 .btn-ghost:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.04);
+  background: var(--hover);
   color: var(--text);
   border-color: transparent;
 }
@@ -146,9 +178,15 @@ button:disabled {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
+  color: var(--text);
   outline: none;
   transition: border-color 160ms;
   user-select: text;
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--text-faint);
 }
 
 .textarea {
@@ -162,7 +200,7 @@ button:disabled {
 
 .input:focus,
 .textarea:focus {
-  border-color: #bdbbb6;
+  border-color: var(--border-strong);
 }
 
 .input.mono {
@@ -189,8 +227,9 @@ button:disabled {
   white-space: nowrap;
 }
 
-.tag-stopped {
-  background: #efeeeb;
+.tag-stopped,
+.tag-stopping {
+  background: var(--neutral-chip);
   color: var(--text-muted);
 }
 
@@ -209,16 +248,11 @@ button:disabled {
   color: var(--pale-yellow-text);
 }
 
-.tag-stopping {
-  background: #efeeeb;
-  color: var(--text-muted);
-}
-
 .dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #cfcdc8;
+  background: var(--border-strong);
   flex: none;
 }
 
@@ -235,7 +269,7 @@ button:disabled {
 }
 
 .dot-stopping {
-  background: #b5b3ae;
+  background: var(--text-faint);
 }
 
 /* Switch */
@@ -244,7 +278,7 @@ button:disabled {
   width: 32px;
   height: 18px;
   border-radius: 9999px;
-  background: #d9d7d2;
+  background: var(--switch-off);
   transition: background 160ms;
   flex: none;
 }
@@ -257,8 +291,8 @@ button:disabled {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #ffffff;
-  transition: transform 160ms;
+  background: var(--text);
+  transition: transform 160ms, background 160ms;
 }
 
 .switch.on {
@@ -266,6 +300,7 @@ button:disabled {
 }
 
 .switch.on::after {
+  background: var(--ink-text);
   transform: translateX(14px);
 }
 
@@ -305,7 +340,7 @@ kbd {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #d9d7d2;
+  background: var(--border-strong);
   border-radius: 4px;
 }
 

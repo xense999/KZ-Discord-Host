@@ -111,7 +111,9 @@ function startResize(e: MouseEvent) {
   height: 100%;
   display: flex;
   flex-direction: column;
-  border: 1px solid #dcdad5;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-window);
+  overflow: hidden;
   background: var(--canvas);
   position: relative;
 }
@@ -192,7 +194,7 @@ function startResize(e: MouseEvent) {
   width: 16px;
   height: 16px;
   cursor: nwse-resize;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><path d='M15 5L5 15M15 10l-5 5' stroke='%23cfcdc8' stroke-width='1.5'/></svg>");
-  background-repeat: no-repeat;
+  background-color: var(--border-strong);
+  mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><path d='M15 5L5 15M15 10l-5 5' stroke='black' stroke-width='1.5'/></svg>") no-repeat;
 }
 </style>
