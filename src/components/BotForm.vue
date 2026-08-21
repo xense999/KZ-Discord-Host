@@ -8,7 +8,7 @@ const emit = defineEmits<{ save: [spec: BotSpec]; cancel: [] }>();
 
 const form = reactive<BotSpec>({ ...props.draft, env: props.draft.env.map((e) => ({ ...e })) });
 const argsText = ref(props.draft.args.join("\n"));
-const revealed = reactive<Record<number, boolean>>({});
+const revealed = ref<boolean[]>(props.draft.env.map(() => false));
 const localError = ref<string | null>(null);
 
 const missingSecrets = computed(() => form.env.filter((e) => e.secret && !e.value).map((e) => e.name));
@@ -16,7 +16,7 @@ const missingSecrets = computed(() => form.env.filter((e) => e.secret && !e.valu
 async function pickExe() {
   const file = await open({
     multiple: false,
-    filters: [{ name: "執行檔", extensions: ["exe", "bat", "cmd"] }],
+    filters: [{ name: "執行檔", extensions: ["exe"] }],
     title: "選擇 bot 執行檔",
   });
   if (typeof file === "string") form.exe = file;
@@ -29,10 +29,12 @@ async function pickCwd() {
 
 function addEnv() {
   form.env.push({ name: "", value: "", secret: false });
+  revealed.value.push(false);
 }
 
 function removeEnv(i: number) {
   form.env.splice(i, 1);
+  revealed.value.splice(i, 1);
 }
 
 function submit() {
@@ -102,7 +104,7 @@ function submit() {
       <div class="field">
         <div class="env-head">
           <label>環境變數</label>
-          <button type="button" class="btn btn-ghost small" @click="addEnv">新增一列</button>
+          <button type="button" class="btn btn-ghost btn-sm" @click="addEnv">新增一列</button>
         </div>
         <div v-if="form.env.length === 0" class="hint">沒有環境變數。</div>
         <div v-for="(e, i) in form.env" :key="i" class="env-row">
@@ -118,7 +120,7 @@ function submit() {
             <button
               v-if="e.secret"
               type="button"
-              class="btn btn-ghost small"
+              class="btn btn-ghost btn-sm"
               @click="revealed[i] = !revealed[i]"
             >
               {{ revealed[i] ? "隱藏" : "顯示" }}
@@ -127,7 +129,7 @@ function submit() {
           <label class="check" :title="'秘密：UI 遮罩顯示'">
             <input type="checkbox" v-model="e.secret" /> 秘密
           </label>
-          <button type="button" class="btn btn-ghost small btn-danger" @click="removeEnv(i)">刪</button>
+          <button type="button" class="btn btn-ghost btn-sm btn-danger" @click="removeEnv(i)">刪</button>
           <div v-if="e.description" class="hint env-hint">{{ e.description }}</div>
         </div>
       </div>
@@ -216,12 +218,6 @@ h2 {
   font-size: 13px;
   color: var(--text-muted);
   white-space: nowrap;
-}
-
-.small {
-  height: 26px;
-  padding: 0 8px;
-  font-size: 12px;
 }
 
 .autostart {

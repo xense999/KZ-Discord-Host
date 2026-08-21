@@ -25,6 +25,8 @@ const stateLabel = computed(() => {
       return `執行中 · pid ${s.pid} · ${uptime(s.since_ms)}`;
     case "starting":
       return "啟動中";
+    case "stopping":
+      return "停止中";
     case "backoff": {
       const left = Math.max(0, Math.ceil((s.until_ms - now.value) / 1000));
       return `等待重啟 · ${left} 秒後（第 ${s.attempt + 1} 次）`;
@@ -43,6 +45,7 @@ function uptime(since: number): string {
 }
 
 const isActive = computed(() => state.value.kind !== "stopped");
+const isStopping = computed(() => state.value.kind === "stopping");
 
 const logEl = ref<HTMLElement | null>(null);
 const autoScroll = ref(true);
@@ -92,8 +95,8 @@ function timeOnly(ts: string): string {
       </div>
       <div class="ops">
         <button class="btn btn-primary" :disabled="isActive" @click="store.start(bot.id)">啟動</button>
-        <button class="btn" :disabled="!isActive" @click="store.stop(bot.id)">停止</button>
-        <button class="btn" :disabled="!isActive" @click="store.restart(bot.id)">重啟</button>
+        <button class="btn" :disabled="!isActive || isStopping" @click="store.stop(bot.id)">停止</button>
+        <button class="btn" :disabled="!isActive || isStopping" @click="store.restart(bot.id)">重啟</button>
         <span class="spacer"></span>
         <button class="btn btn-ghost" @click="emit('edit', bot)">編輯</button>
         <button class="btn btn-ghost btn-danger" @click="remove">
@@ -120,7 +123,7 @@ function timeOnly(ts: string): string {
       <span class="label">Log</span>
       <span class="hint" v-if="!autoScroll">已暫停自動捲動（捲到底恢復）</span>
       <span class="spacer"></span>
-      <button class="btn btn-ghost small" @click="store.clearLogView(bot.id)">清除畫面</button>
+      <button class="btn btn-ghost btn-sm" @click="store.clearLogView(bot.id)">清除畫面</button>
     </div>
     <div ref="logEl" class="log" @scroll="onScroll">
       <div v-if="lines.length === 0" class="log-empty">尚無輸出。</div>
@@ -211,12 +214,6 @@ h2 {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-faint);
-}
-
-.small {
-  height: 24px;
-  padding: 0 8px;
-  font-size: 12px;
 }
 
 .log {

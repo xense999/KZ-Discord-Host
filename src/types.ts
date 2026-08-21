@@ -19,7 +19,8 @@ export type BotState =
   | { kind: "stopped" }
   | { kind: "starting" }
   | { kind: "running"; pid: number; since_ms: number }
-  | { kind: "backoff"; until_ms: number; attempt: number };
+  | { kind: "backoff"; until_ms: number; attempt: number }
+  | { kind: "stopping" };
 
 export interface StateEvent {
   id: string;

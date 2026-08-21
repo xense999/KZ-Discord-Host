@@ -23,9 +23,9 @@ function hide() {
       <span class="brand-name" data-tauri-drag-region>KZ Bot Host</span>
     </div>
     <div class="actions">
-      <button class="btn small" @click="emit('import')">匯入資料夾</button>
-      <button class="btn small" @click="emit('new')">新增</button>
-      <button class="btn btn-ghost small" :class="{ active: settingsActive }" @click="emit('settings')">設定</button>
+      <button class="btn btn-sm" @click="emit('import')">匯入資料夾</button>
+      <button class="btn btn-sm" @click="emit('new')">新增</button>
+      <button class="btn btn-ghost btn-sm" :class="{ active: settingsActive }" @click="emit('settings')">設定</button>
     </div>
     <div class="wbtns">
       <button class="wbtn" title="最小化" @click="minimize">
@@ -75,12 +75,6 @@ function hide() {
 .actions {
   display: flex;
   gap: 6px;
-}
-
-.small {
-  height: 26px;
-  padding: 0 9px;
-  font-size: 12px;
 }
 
 .actions .active {

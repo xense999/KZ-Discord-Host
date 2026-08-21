@@ -19,8 +19,9 @@ const pane = ref<Pane>({ kind: "bot" });
 onMounted(() => store.init());
 
 function selectBot(id: string) {
+  const alreadyShowing = pane.value.kind === "bot" && store.selectedId === id;
   pane.value = { kind: "bot" };
-  store.select(store.selectedId === id && pane.value.kind === "bot" ? null : id);
+  store.select(alreadyShowing ? null : id);
 }
 
 function openSettings() {
@@ -191,7 +192,7 @@ function startResize(e: MouseEvent) {
   width: 16px;
   height: 16px;
   cursor: nwse-resize;
-  background:
-    linear-gradient(135deg, transparent 0 50%, #cfcdc8 50% 56%, transparent 56% 68%, #cfcdc8 68% 74%, transparent 74%);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><path d='M15 5L5 15M15 10l-5 5' stroke='%23cfcdc8' stroke-width='1.5'/></svg>");
+  background-repeat: no-repeat;
 }
 </style>

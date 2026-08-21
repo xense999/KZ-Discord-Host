@@ -1,4 +1,4 @@
-# config — 模組規範
+# config — 模組規範（2026-08-21）
 
 > 本模組契約的唯一 owner。建檔後記得回寫 `docs/規範.md` 歸屬總表的規範檔欄。
 
@@ -8,7 +8,8 @@
 - `load(path) -> Result<Config, ConfigError>`：檔案不存在＝預設；壞檔＝Err 且原檔不動。
 - `save(path, &Config)`：寫 `.json.tmp` 再 rename（原子）。
 - `app_dir()`／`config_path()`／`logs_dir()`：`%APPDATA%\KZ Bot Host\…` 的唯一出處。
-- `BotSpec::new_id()`、`BotSpec::effective_cwd()`。
+- `BotSpec::new_id()`、`BotSpec::effective_cwd()`、`BotSpec::normalize() -> Result<(), String>`（trim／空名空 exe 拒絕／補 id）。
+- `ensure_logs_dir() -> io::Result<PathBuf>`。
 
 ## 單一來源
 

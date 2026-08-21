@@ -33,6 +33,7 @@ pub enum BotState {
     Starting,
     Running { pid: u32, since_ms: i64 },
     Backoff { until_ms: i64, attempt: u32 },
+    Stopping,
 }
 
 #[derive(Serialize, Clone, Debug, PartialEq, Eq)]
@@ -87,9 +88,11 @@ impl Shared {
     }
 }
 
+/// A live supervise task. Both fields are taken by the first `stop` so the
+/// slot stays occupied (start is rejected) until the task has really ended.
 struct Run {
-    stop_tx: oneshot::Sender<()>,
-    done: tauri::async_runtime::JoinHandle<()>,
+    stop_tx: Option<oneshot::Sender<()>>,
+    done: Option<tauri::async_runtime::JoinHandle<()>>,
 }
 
 struct Slot {
@@ -153,15 +156,27 @@ impl Supervisor {
     }
 
     pub fn log_tail(&self, id: &str) -> Result<Vec<LogLine>, String> {
-        let slots = self.slots.lock().unwrap();
-        let slot = slots.iter().find(|s| s.shared.id == id).ok_or_else(|| format!("找不到 bot：{id}"))?;
-        let tail = slot.shared.logger.lock().unwrap().tail();
+        let shared = self.shared_of(id)?;
+        let tail = shared.logger.lock().unwrap().tail();
         Ok(tail)
+    }
+
+    fn shared_of(&self, id: &str) -> Result<Arc<Shared>, String> {
+        self.slots
+            .lock()
+            .unwrap()
+            .iter()
+            .find(|s| s.shared.id == id)
+            .map(|s| s.shared.clone())
+            .ok_or_else(|| not_found(id))
     }
 
     pub fn start(&self, id: &str) -> Result<(), String> {
         let mut slots = self.slots.lock().unwrap();
-        let slot = slots.iter_mut().find(|s| s.shared.id == id).ok_or_else(|| format!("找不到 bot：{id}"))?;
+        let slot = slots
+            .iter_mut()
+            .find(|s| s.shared.id == id)
+            .ok_or_else(|| not_found(id))?;
         if slot.run.is_some() {
             return Err(format!("「{}」已在執行中", slot.spec.name));
         }
@@ -173,21 +188,14 @@ impl Supervisor {
             self.job.clone(),
             stop_rx,
         ));
-        slot.run = Some(Run { stop_tx, done });
+        slot.run = Some(Run { stop_tx: Some(stop_tx), done: Some(done) });
         Ok(())
     }
 
     /// Stop and wait until the process is gone. Stopping a stopped bot is a no-op.
     pub async fn stop(&self, id: &str) -> Result<(), String> {
-        let run = {
-            let mut slots = self.slots.lock().unwrap();
-            let slot = slots.iter_mut().find(|s| s.shared.id == id).ok_or_else(|| format!("找不到 bot：{id}"))?;
-            slot.run.take()
-        };
-        if let Some(run) = run {
-            let _ = run.stop_tx.send(());
-            let _ = tokio::time::timeout(STOP_TIMEOUT, run.done).await;
-        }
+        let shared = self.shared_of(id)?;
+        self.stop_shared(&shared).await;
         Ok(())
     }
 
@@ -197,15 +205,44 @@ impl Supervisor {
     }
 
     pub async fn shutdown_all(&self) {
-        let runs: Vec<Run> = {
-            let mut slots = self.slots.lock().unwrap();
-            slots.iter_mut().filter_map(|s| s.run.take()).collect()
-        };
-        for run in runs {
-            let _ = run.stop_tx.send(());
-            let _ = tokio::time::timeout(STOP_TIMEOUT, run.done).await;
+        let all: Vec<Arc<Shared>> = self.slots.lock().unwrap().iter().map(|s| s.shared.clone()).collect();
+        for shared in all {
+            self.stop_shared(&shared).await;
         }
     }
+
+    /// Take the run's handles (leaving the slot occupied), signal stop, wait;
+    /// on timeout abort the task (its child is `kill_on_drop`). Only then
+    /// free the slot so a new start cannot overlap the dying process.
+    async fn stop_shared(&self, shared: &Arc<Shared>) {
+        let taken = {
+            let mut slots = self.slots.lock().unwrap();
+            let Some(slot) = slots.iter_mut().find(|s| s.shared.id == shared.id) else { return };
+            let Some(run) = slot.run.as_mut() else { return };
+            (run.stop_tx.take(), run.done.take())
+        };
+        let (Some(stop_tx), Some(mut done)) = taken else {
+            // Another stop is already in flight; it owns the cleanup.
+            return;
+        };
+        shared.set_state(BotState::Stopping);
+        let _ = stop_tx.send(());
+        if tokio::time::timeout(STOP_TIMEOUT, &mut done).await.is_err() {
+            done.abort();
+            shared.log(Stream::System, "停止逾時，強制終止");
+        }
+        let mut slots = self.slots.lock().unwrap();
+        if let Some(slot) = slots.iter_mut().find(|s| s.shared.id == shared.id) {
+            slot.run = None;
+        }
+        if *shared.state.lock().unwrap() != BotState::Stopped {
+            shared.set_state(BotState::Stopped);
+        }
+    }
+}
+
+fn not_found(id: &str) -> String {
+    format!("找不到 bot：{id}")
 }
 
 fn now_ms() -> i64 {
@@ -343,6 +380,7 @@ mod tests {
         assert!(sup.start("crash").is_err(), "double start must be rejected");
 
         sup.stop("crash").await.unwrap();
+        wait_for(&rx, |s| *s == BotState::Stopping);
         wait_for(&rx, |s| *s == BotState::Stopped);
         let tail = sup.log_tail("crash").unwrap();
         assert!(tail.iter().any(|l| l.line.contains("exit code 1")), "{tail:?}");
@@ -353,7 +391,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn stop_kills_a_long_running_child() {
+    async fn stop_kills_a_long_running_child_and_restart_works() {
         let (tx, rx) = mpsc::channel();
         let dir = tempfile::tempdir().unwrap();
         let sup = Supervisor::new(
@@ -369,5 +407,11 @@ mod tests {
         assert!(t.elapsed() < Duration::from_secs(5));
         wait_for(&rx, |s| *s == BotState::Stopped);
         assert!(sup.stop("long").await.is_ok(), "stopping a stopped bot is a no-op");
+        sup.start("long").unwrap();
+        wait_for(&rx, |s| matches!(s, BotState::Running { .. }));
+        sup.restart("long").await.unwrap();
+        wait_for(&rx, |s| matches!(s, BotState::Running { .. }));
+        sup.shutdown_all().await;
+        assert!(sup.statuses().iter().all(|s| s.state == BotState::Stopped));
     }
 }

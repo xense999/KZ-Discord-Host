@@ -54,27 +54,34 @@ export const useBotsStore = defineStore("bots", () => {
     statuses.value = Object.fromEntries(list.map((s) => [s.id, s]));
   }
 
+  // Subscribe first, then snapshot: nothing emitted in between is lost.
   let listening = false;
   async function init() {
+    if (!listening) {
+      listening = true;
+      await listen<StateEvent>("bot-state", (e) => {
+        statuses.value[e.payload.id] = e.payload;
+      });
+      await listen<LogEvent>("bot-log", (e) => queueLog(e.payload));
+    }
     await run(async () => {
       await refresh();
       startupNotice.value = await invoke<string | null>("startup_notice");
       configPath.value = await invoke<string>("config_path");
       hostAutostart.value = await invoke<boolean>("get_host_autostart");
     });
-    if (listening) return;
-    listening = true;
-    await listen<StateEvent>("bot-state", (e) => {
-      statuses.value[e.payload.id] = e.payload;
-    });
-    await listen<LogEvent>("bot-log", (e) => queueLog(e.payload));
   }
 
+  // Bots whose ring buffer has been pulled once; later lines arrive by event.
+  const tailLoaded = new Set<string>();
   async function select(id: string | null) {
     selectedId.value = id;
-    if (id && !logs.value[id]) {
+    if (id && !tailLoaded.has(id)) {
       const tail = await run(() => invoke<LogLine[]>("get_log_tail", { id }));
-      if (tail) logs.value[id] = tail;
+      if (tail) {
+        tailLoaded.add(id);
+        logs.value[id] = tail;
+      }
     }
   }
 
@@ -91,6 +98,7 @@ export const useBotsStore = defineStore("bots", () => {
   async function remove(id: string) {
     await run(() => invoke("remove_bot", { id }));
     delete logs.value[id];
+    tailLoaded.delete(id);
     if (selectedId.value === id) selectedId.value = null;
     await refresh();
   }

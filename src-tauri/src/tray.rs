@@ -4,8 +4,6 @@ use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Manager};
 
-use crate::app_state::AppState;
-
 pub const MAIN_WINDOW: &str = "main";
 const MENU_SHOW: &str = "show";
 const MENU_QUIT: &str = "quit";
@@ -18,17 +16,9 @@ pub fn show_main(app: &AppHandle) {
     }
 }
 
-pub fn hide_main(app: &AppHandle) {
-    if let Some(w) = app.get_webview_window(MAIN_WINDOW) {
-        let _ = w.hide();
-    }
-}
-
-/// Stop every bot, then exit. Idempotent: a second call finds nothing to stop.
+/// Exit the app; bots are stopped by the `RunEvent::Exit` handler in lib.rs
+/// (and the Job Object is the backstop for any other exit path).
 pub fn quit(app: &AppHandle) {
-    if let Some(state) = app.try_state::<AppState>() {
-        tauri::async_runtime::block_on(state.supervisor.shutdown_all());
-    }
     app.exit(0);
 }
 

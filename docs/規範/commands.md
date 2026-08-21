@@ -1,4 +1,4 @@
-# commands（Tauri IPC）— 模組規範
+# commands（Tauri IPC）— 模組規範（2026-08-21）
 
 > 本模組契約的唯一 owner。建檔後記得回寫 `docs/規範.md` 歸屬總表的規範檔欄。
 
@@ -14,7 +14,7 @@
 ## 不變量
 
 - 每個命令只做轉呼叫＋錯誤轉字串；不含業務邏輯。
-- `upsert_bot` 與 `remove_bot` 成功後必 `persist`。
+- `upsert_bot` 與 `remove_bot` 成功後必 `persist`；欄位驗證／補 id 走 `BotSpec::normalize()`（config 模組），命令不自己驗。
 
 ## 禁止
 

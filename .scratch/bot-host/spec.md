@@ -132,6 +132,13 @@ Date: 2026-08-21
 - 遠端控制、通知、統計。
 - 打包／發版（另叫 release-profile，使用者說「打包」才做）。
 
+## Amendments（2026-08-21 實作後訂正，以 docs/規範 為準）
+
+- Module Breakdown 的 `Config.host_autostart` 不存在：開機自啟狀態以登錄檔（plugin）為唯一來源。
+- `Supervisor::apply_config` 改為 `upsert(spec)`／`remove(id)`；`process::kill` 併入 supervisor（`child.kill`）；`tail(n)` 改 `tail()` 回整個 ring。
+- `SettingsBar` 改名 `SettingsPanel`；新增 `TitleBar`（使用者同日要求無邊框小視窗）。
+- 額外行為（小）：移除鈕二段確認、設定頁顯示設定檔路徑、`config_path` IPC。
+
 ## Further Notes
 
 - Xense-Bot-rs 是第一隻接入的 bot，也是 README 的範本；README 的 AI 教學要引用它的 `bot.toml`。

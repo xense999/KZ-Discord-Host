@@ -1,11 +1,11 @@
-# process — 模組規範
+# process — 模組規範（2026-08-21）
 
 > 本模組契約的唯一 owner。建檔後記得回寫 `docs/規範.md` 歸屬總表的規範檔欄。
 
 ## 公開介面
 
 - `Job::new()`：kill-on-close Job Object；`Job::assign(&Child)`。
-- `spawn(&BotSpec, &Job) -> io::Result<tokio::process::Child>`：CREATE_NO_WINDOW、stdin null、stdout/stderr piped、繼承環境＋spec.env 覆蓋、cwd＝`effective_cwd()`、spawn 後立即 assign。
+- `spawn(&BotSpec, &Job) -> io::Result<tokio::process::Child>`：CREATE_NO_WINDOW、stdin null、stdout/stderr piped、繼承環境＋spec.env 覆蓋（**value 為空的變數不設定**，讓 bot 自己報「缺環境變數」）、cwd＝`effective_cwd()`、spawn 後立即 assign、`kill_on_drop`。
 
 ## 單一來源
 

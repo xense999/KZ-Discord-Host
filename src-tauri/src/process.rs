@@ -72,10 +72,10 @@ pub fn spawn(spec: &BotSpec, job: &Job) -> io::Result<Child> {
     if let Some(cwd) = spec.effective_cwd() {
         cmd.current_dir(cwd);
     }
-    for var in &spec.env {
-        if !var.name.is_empty() {
-            cmd.env(&var.name, &var.value);
-        }
+    // An empty value means "not filled in yet" (e.g. an imported secret);
+    // leave the parent environment alone so the bot reports it as missing.
+    for var in spec.env.iter().filter(|v| !v.name.is_empty() && !v.value.is_empty()) {
+        cmd.env(&var.name, &var.value);
     }
     let child = cmd.spawn()?;
     job.assign(&child)?;

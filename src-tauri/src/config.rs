@@ -59,6 +59,21 @@ impl BotSpec {
         uuid::Uuid::new_v4().to_string()
     }
 
+    /// Trim, reject empty name/exe, assign an id when missing.
+    pub fn normalize(&mut self) -> Result<(), String> {
+        self.name = self.name.trim().to_string();
+        if self.name.is_empty() {
+            return Err("名稱不可為空".into());
+        }
+        if self.exe.as_os_str().is_empty() {
+            return Err("執行檔路徑不可為空".into());
+        }
+        if self.id.is_empty() {
+            self.id = Self::new_id();
+        }
+        Ok(())
+    }
+
     /// Working directory used when spawning: explicit `cwd`, else the exe folder.
     pub fn effective_cwd(&self) -> Option<PathBuf> {
         self.cwd
@@ -94,6 +109,13 @@ pub fn config_path() -> PathBuf {
 
 pub fn logs_dir() -> PathBuf {
     app_dir().join("logs")
+}
+
+/// `logs_dir()`, created if missing.
+pub fn ensure_logs_dir() -> std::io::Result<PathBuf> {
+    let dir = logs_dir();
+    fs::create_dir_all(&dir)?;
+    Ok(dir)
 }
 
 /// Missing file -> default config. Unreadable or malformed file -> Err, file untouched.
@@ -184,6 +206,18 @@ mod tests {
         assert!(bot.args.is_empty());
         assert!(bot.env.is_empty());
         assert_eq!(cfg.schema_version, SCHEMA_VERSION);
+    }
+
+    #[test]
+    fn normalize_trims_validates_and_assigns_id() {
+        let mut bot = BotSpec { name: "  x  ".into(), exe: PathBuf::from("x.exe"), ..Default::default() };
+        bot.normalize().unwrap();
+        assert_eq!(bot.name, "x");
+        assert!(!bot.id.is_empty());
+        let mut blank = BotSpec { name: "  ".into(), exe: PathBuf::from("x.exe"), ..Default::default() };
+        assert!(blank.normalize().is_err());
+        let mut no_exe = BotSpec { name: "x".into(), ..Default::default() };
+        assert!(no_exe.normalize().is_err());
     }
 
     #[test]

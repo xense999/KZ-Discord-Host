@@ -1,11 +1,11 @@
-# tray — 模組規範
+# tray — 模組規範（2026-08-21）
 
 > 本模組契約的唯一 owner。建檔後記得回寫 `docs/規範.md` 歸屬總表的規範檔欄。
 
 ## 公開介面
 
 - `setup(&AppHandle)`：建匣圖示＋選單（顯示／結束）、左鍵／雙擊顯示。
-- `show_main`／`hide_main`／`quit`（先 `shutdown_all` 再 exit，可重入）。
+- `show_main`／`quit`（只 `app.exit(0)`；停 bot 的唯一路徑是 lib.rs 的 `RunEvent::Exit` handler，Job Object 為保險）。
 - 常數 `MAIN_WINDOW`。
 
 ## 單一來源
@@ -14,7 +14,7 @@
 
 ## 不變量
 
-- 視窗 X 永遠只是 hide（lib.rs 的 on_window_event 負責呼叫）。
+- 視窗永遠只會被 hide、不會被 close：自訂標題列的 X（TitleBar.vue `win.hide()`）與 Alt+F4／系統 CloseRequested（lib.rs `on_window_event` → `window.hide()`）兩條路徑。
 - 「結束」不跳確認。
 
 ## 禁止

@@ -25,8 +25,6 @@ pub enum ImportError {
 #[derive(Deserialize)]
 struct Manifest {
     name: String,
-    #[allow(dead_code)]
-    description: Option<String>,
     exe: PathBuf,
     #[serde(default)]
     args: Vec<String>,

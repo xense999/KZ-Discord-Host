@@ -1,5 +1,5 @@
-//! Tauri IPC surface. Thin: validates nothing beyond types, delegates to
-//! supervisor / config / bot_toml / autostart and maps errors to strings.
+//! Tauri IPC surface. Thin: delegates to supervisor / config / bot_toml /
+//! autostart and maps errors to strings.
 
 use std::path::PathBuf;
 
@@ -28,15 +28,7 @@ pub fn startup_notice(state: State<'_, AppState>) -> Option<String> {
 
 #[tauri::command]
 pub fn upsert_bot(state: State<'_, AppState>, mut spec: BotSpec) -> Result<BotSpec, String> {
-    if spec.name.trim().is_empty() {
-        return Err("名稱不可為空".into());
-    }
-    if spec.exe.as_os_str().is_empty() {
-        return Err("執行檔路徑不可為空".into());
-    }
-    if spec.id.is_empty() {
-        spec.id = BotSpec::new_id();
-    }
+    spec.normalize()?;
     state.supervisor.upsert(spec.clone());
     state.persist()?;
     Ok(spec)
@@ -86,8 +78,7 @@ pub fn set_host_autostart(app: AppHandle, enabled: bool) -> Result<(), String> {
 #[tauri::command]
 pub fn open_logs_dir(app: AppHandle) -> Result<(), String> {
     use tauri_plugin_opener::OpenerExt;
-    let dir = config::logs_dir();
-    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let dir = config::ensure_logs_dir().map_err(|e| e.to_string())?;
     app.opener()
         .open_path(dir.to_string_lossy().to_string(), None::<&str>)
         .map_err(|e| e.to_string())

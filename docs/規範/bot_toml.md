@@ -1,4 +1,4 @@
-# bot_toml — 模組規範
+# bot_toml — 模組規範（2026-08-21）
 
 > 本模組契約的唯一 owner。建檔後記得回寫 `docs/規範.md` 歸屬總表的規範檔欄。
 
@@ -9,7 +9,7 @@
 
 ## 單一來源
 
-- `bot.toml` 欄位定義（name／description／exe／args／cwd／autostart／[[env]] name,secret,description,value）只在此模組的 `Manifest` 型別；README 只轉述、spec 為文字規格。
+- `bot.toml` 欄位定義（name／exe／args／cwd／autostart／[[env]] name,secret,description,value）只在此模組的 `Manifest` 型別；`description`（頂層）目前無消費者，解析時忽略（serde 預設略過未知欄位），README 仍允許寫。
 
 ## 不變量
 
