@@ -18,8 +18,8 @@
         "height": 640,
         "resizable": false,
         "decorations": false,
-        "transparent": false,
-        "shadow": true,
+        "transparent": true,
+        "shadow": false,
         "visible": false
       },
       {
@@ -30,8 +30,8 @@
         "center": true,
         "resizable": false,
         "decorations": false,
-        "transparent": false,
-        "shadow": true,
+        "transparent": true,
+        "shadow": false,
         "visible": false
       },
       {
@@ -42,8 +42,8 @@
         "center": true,
         "resizable": false,
         "decorations": false,
-        "transparent": false,
-        "shadow": true,
+        "transparent": true,
+        "shadow": false,
         "visible": false
       }
     ],
