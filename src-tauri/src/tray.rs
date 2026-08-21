@@ -1,19 +1,44 @@
-//! System tray icon, its menu, and main-window show/hide lifecycle.
+//! System tray icon, its menu, and window show/hide lifecycle.
 
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
+
+use crate::app_state::AppState;
 
 pub const MAIN_WINDOW: &str = "main";
 const MENU_SHOW: &str = "show";
 const MENU_QUIT: &str = "quit";
+/// Sent to a child window so it re-routes to whatever was just requested.
+pub const EVENT_ROUTE: &str = "route";
+
+/// Labels of the windows declared in tauri.conf.json besides `main`.
+pub const CHILD_WINDOWS: [&str; 2] = ["form", "settings"];
+
+pub fn is_child(label: &str) -> bool {
+    CHILD_WINDOWS.contains(&label)
+}
 
 pub fn show_main(app: &AppHandle) {
-    if let Some(w) = app.get_webview_window(MAIN_WINDOW) {
-        let _ = w.show();
-        let _ = w.unminimize();
-        let _ = w.set_focus();
+    show(app, MAIN_WINDOW);
+}
+
+fn show(app: &AppHandle, label: &str) {
+    let Some(w) = app.get_webview_window(label) else { return };
+    let _ = w.show();
+    let _ = w.unminimize();
+    let _ = w.set_focus();
+}
+
+/// Park `query` for the window to pick up, tell it to re-route, and show it.
+pub fn open_child(app: &AppHandle, label: &str, query: &str) {
+    if let Some(state) = app.try_state::<AppState>() {
+        state.routes.lock().unwrap().insert(label.to_string(), query.to_string());
     }
+    if let Some(w) = app.get_webview_window(label) {
+        let _ = w.emit(EVENT_ROUTE, query.to_string());
+    }
+    show(app, label);
 }
 
 /// Exit the app; bots are stopped by the `RunEvent::Exit` handler in lib.rs

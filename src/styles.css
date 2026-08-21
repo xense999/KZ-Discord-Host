@@ -63,7 +63,7 @@ body,
 #app {
   height: 100%;
   margin: 0;
-  background: transparent;
+  background: var(--canvas);
 }
 
 body {

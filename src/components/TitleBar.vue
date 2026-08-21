@@ -1,17 +1,20 @@
 <script setup lang="ts">
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
-const win = getCurrentWindow();
+defineProps<{
+  title: string;
+  /** Child windows have no minimise button. */
+  child?: boolean;
+}>();
 
-defineProps<{ settingsActive: boolean }>();
-const emit = defineEmits<{ import: []; new: []; settings: [] }>();
+const win = getCurrentWindow();
 
 function minimize() {
   void win.minimize();
 }
 
-// Close only hides: the app lives in the tray until "結束" from the tray menu.
-function hide() {
+// Child windows hide too: the window object is reused on the next open.
+function closeOrHide() {
   void win.hide();
 }
 </script>
@@ -20,18 +23,16 @@ function hide() {
   <header class="titlebar" data-tauri-drag-region>
     <div class="brand" data-tauri-drag-region>
       <img class="brand-mark" src="../assets/icon.png" alt="" data-tauri-drag-region />
-      <span class="brand-name" data-tauri-drag-region>KZ Bot Host</span>
+      <span class="brand-name" data-tauri-drag-region>{{ title }}</span>
     </div>
     <div class="actions">
-      <button class="btn btn-sm" @click="emit('import')">匯入資料夾</button>
-      <button class="btn btn-sm" @click="emit('new')">新增</button>
-      <button class="btn btn-ghost btn-sm" :class="{ active: settingsActive }" @click="emit('settings')">設定</button>
+      <slot></slot>
     </div>
     <div class="wbtns">
-      <button class="wbtn" title="最小化" @click="minimize">
+      <button v-if="!child" class="wbtn" title="最小化" @click="minimize">
         <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 5.5h8" stroke="currentColor" stroke-width="1.2" /></svg>
       </button>
-      <button class="wbtn wbtn-close" title="藏到系統匣" @click="hide">
+      <button class="wbtn wbtn-close" :title="child ? '關閉' : '藏到系統匣'" @click="closeOrHide">
         <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7" stroke="currentColor" stroke-width="1.2" /></svg>
       </button>
     </div>
@@ -75,11 +76,6 @@ function hide() {
 .actions {
   display: flex;
   gap: 6px;
-}
-
-.actions .active {
-  color: var(--text);
-  background: var(--hover);
 }
 
 .wbtns {

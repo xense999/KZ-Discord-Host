@@ -7,6 +7,7 @@ pub mod logs;
 pub mod process;
 pub mod supervisor;
 pub mod tray;
+pub mod window_shape;
 
 use std::sync::Arc;
 
@@ -50,14 +51,20 @@ pub fn run() {
             for bot in cfg.bots.iter().filter(|b| b.autostart) {
                 let _ = supervisor.start(&bot.id);
             }
-            app.manage(AppState { supervisor, startup_notice: notice });
+            app.manage(AppState { supervisor, startup_notice: notice, routes: Default::default() });
             tray::setup(app.handle())?;
+            for window in app.webview_windows().values() {
+                window_shape::apply_rounded(&window.as_ref().window());
+            }
             if !autostart::launched_minimized() {
                 tray::show_main(app.handle());
             }
             Ok(())
         })
         .on_window_event(|window, event| {
+            window_shape::on_window_event(window, event);
+            // Windows are never destroyed: the main one hides to the tray, the
+            // child ones are reused the next time they are opened.
             if let WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
                 let _ = window.hide();
@@ -77,6 +84,8 @@ pub fn run() {
             commands::get_host_autostart,
             commands::set_host_autostart,
             commands::open_logs_dir,
+            commands::open_window,
+            commands::take_route,
             commands::config_path,
         ])
         .build(tauri::generate_context!())

@@ -1,5 +1,8 @@
 //! Process-wide state handed to Tauri (`app.manage`).
 
+use std::collections::HashMap;
+use std::sync::Mutex;
+
 use crate::config::{self, Config};
 use crate::supervisor::Supervisor;
 
@@ -8,6 +11,8 @@ pub struct AppState {
     /// Set when the config file could not be read at startup; the UI shows it
     /// as a banner. The broken file is left untouched until the user edits.
     pub startup_notice: Option<String>,
+    /// Query string waiting for a child window (by label) to pick up on mount.
+    pub routes: Mutex<HashMap<String, String>>,
 }
 
 impl AppState {

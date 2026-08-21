@@ -1,10 +1,12 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
+import { emit, listen } from "@tauri-apps/api/event";
 import type { BotSpec, LogEvent, LogLine, StateEvent } from "../types";
 
 export const LOG_RING = 500;
+/** Global event: the bot list changed in some window. */
+export const EVENT_BOTS_CHANGED = "bots-changed";
 
 export const useBotsStore = defineStore("bots", () => {
   const bots = ref<BotSpec[]>([]);
@@ -63,6 +65,8 @@ export const useBotsStore = defineStore("bots", () => {
         statuses.value[e.payload.id] = e.payload;
       });
       await listen<LogEvent>("bot-log", (e) => queueLog(e.payload));
+      // Child windows (form/settings) edit the bot list; every window refreshes.
+      await listen(EVENT_BOTS_CHANGED, () => refresh());
     }
     await run(async () => {
       await refresh();
@@ -91,7 +95,7 @@ export const useBotsStore = defineStore("bots", () => {
 
   async function upsert(spec: BotSpec): Promise<BotSpec | undefined> {
     const saved = await run(() => invoke<BotSpec>("upsert_bot", { spec }));
-    if (saved) await refresh();
+    if (saved) await emit(EVENT_BOTS_CHANGED);
     return saved;
   }
 
@@ -100,7 +104,7 @@ export const useBotsStore = defineStore("bots", () => {
     delete logs.value[id];
     tailLoaded.delete(id);
     if (selectedId.value === id) selectedId.value = null;
-    await refresh();
+    await emit(EVENT_BOTS_CHANGED);
   }
 
   const importFolder = (dir: string) => run(() => invoke<BotSpec>("import_bot_folder", { dir }));
@@ -115,6 +119,13 @@ export const useBotsStore = defineStore("bots", () => {
   }
 
   const openLogsDir = () => run(() => invoke("open_logs_dir"));
+
+  /** Query parked for this window by open_window (child windows call once on mount). */
+  const takeRoute = () => run(() => invoke<string | null>("take_route"));
+
+  /** Open (or focus) a child window: view = "form" | "settings". */
+  const openWindow = (view: "form" | "settings", query?: string) =>
+    run(() => invoke("open_window", { view, query: query ?? null }));
 
   function clearLogView(id: string) {
     logs.value[id] = [];
@@ -142,6 +153,8 @@ export const useBotsStore = defineStore("bots", () => {
     setAutostart,
     setHostAutostart,
     openLogsDir,
+    openWindow,
+    takeRoute,
     clearLogView,
   };
 });

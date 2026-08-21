@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useBotsStore } from "../stores/bots";
-import { applyTheme, currentTheme } from "../theme";
+import { currentTheme, setTheme } from "../theme";
 
 const store = useBotsStore();
 const dark = ref(currentTheme() === "dark");
 
 function toggleTheme() {
   dark.value = !dark.value;
-  applyTheme(dark.value ? "dark" : "light");
+  setTheme(dark.value ? "dark" : "light");
 }
 </script>
 
