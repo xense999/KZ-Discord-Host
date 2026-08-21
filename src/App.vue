@@ -1,160 +1,181 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import { invoke } from "@tauri-apps/api/core";
+import { onMounted, ref } from "vue";
+import { open } from "@tauri-apps/plugin-dialog";
+import { useBotsStore } from "./stores/bots";
+import BotList from "./components/BotList.vue";
+import BotPanel from "./components/BotPanel.vue";
+import BotForm from "./components/BotForm.vue";
+import SettingsPanel from "./components/SettingsPanel.vue";
+import type { BotSpec } from "./types";
+import { emptySpec } from "./types";
 
-const greetMsg = ref("");
-const name = ref("");
+const store = useBotsStore();
 
-async function greet() {
-  // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-  greetMsg.value = await invoke("greet", { name: name.value });
+type Pane = { kind: "bot" } | { kind: "settings" } | { kind: "form"; draft: BotSpec; title: string };
+const pane = ref<Pane>({ kind: "bot" });
+
+onMounted(() => store.init());
+
+function selectBot(id: string) {
+  pane.value = { kind: "bot" };
+  store.select(id);
+}
+
+function openSettings() {
+  pane.value = { kind: "settings" };
+}
+
+function newBot() {
+  pane.value = { kind: "form", draft: emptySpec(), title: "新增 bot" };
+}
+
+function editBot(bot: BotSpec) {
+  pane.value = { kind: "form", draft: JSON.parse(JSON.stringify(bot)), title: `編輯「${bot.name}」` };
+}
+
+async function importFolder() {
+  const dir = await open({ directory: true, multiple: false, title: "選擇含 bot.toml 的資料夾" });
+  if (typeof dir !== "string") return;
+  const draft = await store.importFolder(dir);
+  if (draft) pane.value = { kind: "form", draft, title: `匯入「${draft.name}」` };
+}
+
+async function saveForm(spec: BotSpec) {
+  const saved = await store.upsert(spec);
+  if (saved) {
+    pane.value = { kind: "bot" };
+    store.select(saved.id);
+  }
+}
+
+function cancelForm() {
+  pane.value = { kind: "bot" };
 }
 </script>
 
 <template>
-  <main class="container">
-    <h1>Welcome to Tauri + Vue</h1>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-name">KZ Bot Host</span>
+      </div>
+      <div class="actions">
+        <button class="btn" @click="importFolder">匯入資料夾</button>
+        <button class="btn" @click="newBot">新增</button>
+        <button class="btn btn-ghost" :class="{ active: pane.kind === 'settings' }" @click="openSettings">設定</button>
+      </div>
+    </header>
 
-    <div class="row">
-      <a href="https://vite.dev" target="_blank">
-        <img src="/vite.svg" class="logo vite" alt="Vite logo" />
-      </a>
-      <a href="https://tauri.app" target="_blank">
-        <img src="/tauri.svg" class="logo tauri" alt="Tauri logo" />
-      </a>
-      <a href="https://vuejs.org/" target="_blank">
-        <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-      </a>
+    <div v-if="store.startupNotice" class="banner banner-warn notice">
+      設定檔讀取失敗，目前以空白設定啟動（原檔未被覆寫）：{{ store.startupNotice }}
     </div>
-    <p>Click on the Tauri, Vite, and Vue logos to learn more.</p>
+    <div v-if="store.error" class="banner banner-error notice" @click="store.error = null">
+      {{ store.error }}
+    </div>
 
-    <form class="row" @submit.prevent="greet">
-      <input id="greet-input" v-model="name" placeholder="Enter a name..." />
-      <button type="submit">Greet</button>
-    </form>
-    <p>{{ greetMsg }}</p>
-  </main>
+    <main class="body">
+      <aside class="sidebar">
+        <BotList :active-id="pane.kind === 'bot' ? store.selectedId : null" @select="selectBot" />
+      </aside>
+      <section class="content">
+        <SettingsPanel v-if="pane.kind === 'settings'" />
+        <BotForm
+          v-else-if="pane.kind === 'form'"
+          :draft="pane.draft"
+          :title="pane.title"
+          @save="saveForm"
+          @cancel="cancelForm"
+        />
+        <BotPanel v-else-if="store.selected" :bot="store.selected" @edit="editBot" />
+        <div v-else class="empty">
+          <p v-if="store.bots.length === 0">還沒有任何 bot。按「匯入資料夾」或「新增」開始。</p>
+          <p v-else>從左側選一隻 bot。</p>
+        </div>
+      </section>
+    </main>
+  </div>
 </template>
 
 <style scoped>
-.logo.vite:hover {
-  filter: drop-shadow(0 0 2em #747bff);
-}
-
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #249b73);
-}
-
-</style>
-<style>
-:root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 400;
-
-  color: #0f0f0f;
-  background-color: #f6f6f6;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
-}
-
-.container {
-  margin: 0;
-  padding-top: 10vh;
+.shell {
+  height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  text-align: center;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: 0.75s;
-}
-
-.logo.tauri:hover {
-  filter: drop-shadow(0 0 2em #24c8db);
-}
-
-.row {
+.topbar {
+  height: 52px;
+  flex: none;
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-mark {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--ink);
+}
+
+.brand-name {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.actions .active {
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.notice {
+  margin: 12px 20px 0;
+  flex: none;
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 260px 1fr;
+}
+
+.sidebar {
+  border-right: 1px solid var(--border);
+  background: var(--canvas);
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.content {
+  min-height: 0;
+  min-width: 0;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+}
+
+.empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
   justify-content: center;
+  color: var(--text-faint);
 }
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-
-a:hover {
-  color: #535bf2;
-}
-
-h1 {
-  text-align: center;
-}
-
-input,
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  color: #0f0f0f;
-  background-color: #ffffff;
-  transition: border-color 0.25s;
-  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
-}
-
-button {
-  cursor: pointer;
-}
-
-button:hover {
-  border-color: #396cd8;
-}
-button:active {
-  border-color: #396cd8;
-  background-color: #e8e8e8;
-}
-
-input,
-button {
-  outline: none;
-}
-
-#greet-input {
-  margin-right: 5px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color: #f6f6f6;
-    background-color: #2f2f2f;
-  }
-
-  a:hover {
-    color: #24c8db;
-  }
-
-  input,
-  button {
-    color: #ffffff;
-    background-color: #0f0f0f98;
-  }
-  button:active {
-    background-color: #0f0f0f69;
-  }
-}
-
 </style>
