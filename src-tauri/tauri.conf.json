@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "kz-bot-host",
+  "productName": "KZ Bot Host",
   "version": "0.1.0",
   "identifier": "com.scorp.kz-bot-host",
   "build": {
@@ -12,9 +12,13 @@
   "app": {
     "windows": [
       {
-        "title": "kz-bot-host",
-        "width": 800,
-        "height": 600
+        "label": "main",
+        "title": "KZ Bot Host",
+        "width": 900,
+        "height": 600,
+        "minWidth": 640,
+        "minHeight": 420,
+        "visible": false
       }
     ],
     "security": {
