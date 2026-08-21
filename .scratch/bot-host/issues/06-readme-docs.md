@@ -4,7 +4,7 @@
 
 **Blocked by:** 04, 05
 
-**Status:** ready-for-agent
+**Status:** done (2026-08-21, dev-mode verified; pending live acceptance)
 
 - [ ] README 繁體中文；AI 教學段落用一個獨立 code block 方便整段複製
 - [ ] bot.toml 欄位表與 spec 一致（spec 為單一來源，README 只轉述）

@@ -4,7 +4,7 @@
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** done (2026-08-21, dev-mode verified; pending live acceptance)
 
 - [ ] IPC：upsert_bot／remove_bot／import_bot_folder（用 dialog plugin 選資料夾）
 - [ ] 匯入錯誤（缺欄位／exe 不存在）在 UI 顯示可讀訊息

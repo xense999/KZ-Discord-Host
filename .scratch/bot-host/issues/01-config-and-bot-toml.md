@@ -4,7 +4,7 @@
 
 **Blocked by:** None — can start immediately
 
-**Status:** ready-for-agent
+**Status:** done (2026-08-21, dev-mode verified; pending live acceptance)
 
 - [ ] Config／BotSpec／EnvVar 型別，`schema_version: 1`，缺欄位有預設
 - [ ] save＝寫 tmp 再 rename；load 壞 JSON → Err 且原檔不動

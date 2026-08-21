@@ -4,7 +4,7 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done (2026-08-21, dev-mode verified; pending live acceptance)
 
 - [ ] Pinia store 訂閱 `bot-state`／`bot-log`，log 合批渲染
 - [ ] 執行中 start 鈕 disable、停止中 stop 鈕 disable

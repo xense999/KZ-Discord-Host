@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { open } from "@tauri-apps/plugin-dialog";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useBotsStore } from "./stores/bots";
+import TitleBar from "./components/TitleBar.vue";
 import BotList from "./components/BotList.vue";
 import BotPanel from "./components/BotPanel.vue";
 import BotForm from "./components/BotForm.vue";
@@ -18,11 +20,11 @@ onMounted(() => store.init());
 
 function selectBot(id: string) {
   pane.value = { kind: "bot" };
-  store.select(id);
+  store.select(store.selectedId === id && pane.value.kind === "bot" ? null : id);
 }
 
 function openSettings() {
-  pane.value = { kind: "settings" };
+  pane.value = pane.value.kind === "settings" ? { kind: "bot" } : { kind: "settings" };
 }
 
 function newBot() {
@@ -51,21 +53,23 @@ async function saveForm(spec: BotSpec) {
 function cancelForm() {
   pane.value = { kind: "bot" };
 }
+
+// Undecorated windows on Windows have no native resize border; this grip
+// hands the drag to the OS so the window still resizes.
+function startResize(e: MouseEvent) {
+  if (e.button !== 0) return;
+  void getCurrentWindow().startResizeDragging("SouthEast");
+}
 </script>
 
 <template>
   <div class="shell">
-    <header class="topbar">
-      <div class="brand">
-        <span class="brand-mark" aria-hidden="true"></span>
-        <span class="brand-name">KZ Bot Host</span>
-      </div>
-      <div class="actions">
-        <button class="btn" @click="importFolder">匯入資料夾</button>
-        <button class="btn" @click="newBot">新增</button>
-        <button class="btn btn-ghost" :class="{ active: pane.kind === 'settings' }" @click="openSettings">設定</button>
-      </div>
-    </header>
+    <TitleBar
+      :settings-active="pane.kind === 'settings'"
+      @import="importFolder"
+      @new="newBot"
+      @settings="openSettings"
+    />
 
     <div v-if="store.startupNotice" class="banner banner-warn notice">
       設定檔讀取失敗，目前以空白設定啟動（原檔未被覆寫）：{{ store.startupNotice }}
@@ -74,9 +78,12 @@ function cancelForm() {
       {{ store.error }}
     </div>
 
-    <main class="body">
+    <main class="body" :class="{ expanded: pane.kind !== 'bot' || store.selected }">
       <aside class="sidebar">
         <BotList :active-id="pane.kind === 'bot' ? store.selectedId : null" @select="selectBot" />
+        <div v-if="store.bots.length === 0" class="empty-list">
+          還沒有任何 bot。按「匯入資料夾」或「新增」開始。
+        </div>
       </aside>
       <section class="content">
         <SettingsPanel v-if="pane.kind === 'settings'" />
@@ -89,11 +96,12 @@ function cancelForm() {
         />
         <BotPanel v-else-if="store.selected" :bot="store.selected" @edit="editBot" />
         <div v-else class="empty">
-          <p v-if="store.bots.length === 0">還沒有任何 bot。按「匯入資料夾」或「新增」開始。</p>
-          <p v-else>從左側選一隻 bot。</p>
+          <p v-if="store.bots.length > 0">選一隻 bot 展開它的 log。</p>
         </div>
       </section>
     </main>
+
+    <div class="grip" @mousedown="startResize" title="拖曳調整大小"></div>
   </div>
 </template>
 
@@ -102,65 +110,36 @@ function cancelForm() {
   height: 100%;
   display: flex;
   flex-direction: column;
-}
-
-.topbar {
-  height: 52px;
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 20px;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.brand-mark {
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-  background: var(--ink);
-}
-
-.brand-name {
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-.actions {
-  display: flex;
-  gap: 8px;
-}
-
-.actions .active {
-  color: var(--text);
-  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid #dcdad5;
+  background: var(--canvas);
+  position: relative;
 }
 
 .notice {
-  margin: 12px 20px 0;
+  margin: 10px 14px 0;
   flex: none;
 }
 
+/* Narrow (default) layout: list on top, selected bot expands below. */
 .body {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 260px 1fr;
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-columns: 1fr;
 }
 
 .sidebar {
-  border-right: 1px solid var(--border);
   background: var(--canvas);
   min-height: 0;
   overflow-y: auto;
+  max-height: 40vh;
+  border-bottom: 1px solid var(--border);
+}
+
+.body:not(.expanded) .sidebar {
+  max-height: none;
+  border-bottom: none;
 }
 
 .content {
@@ -171,11 +150,48 @@ function cancelForm() {
   flex-direction: column;
 }
 
-.empty {
+.body:not(.expanded) .content {
+  display: none;
+}
+
+.empty,
+.empty-list {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-faint);
+  padding: 24px;
+  text-align: center;
+}
+
+/* Wide layout: list beside the panel. */
+@media (min-width: 700px) {
+  .body {
+    grid-template-rows: 1fr;
+    grid-template-columns: 240px 1fr;
+  }
+
+  .sidebar,
+  .body:not(.expanded) .sidebar {
+    max-height: none;
+    border-bottom: none;
+    border-right: 1px solid var(--border);
+  }
+
+  .body:not(.expanded) .content {
+    display: flex;
+  }
+}
+
+.grip {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  background:
+    linear-gradient(135deg, transparent 0 50%, #cfcdc8 50% 56%, transparent 56% 68%, #cfcdc8 68% 74%, transparent 74%);
 }
 </style>

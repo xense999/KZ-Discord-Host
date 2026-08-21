@@ -4,7 +4,7 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done (2026-08-21, dev-mode verified; pending live acceptance)
 
 - [ ] 狀態機 Stopped／Starting／Running／Backoff／Stopping；事件 `bot-state`、`bot-log`
 - [ ] 子程序 CREATE_NO_WINDOW、env 覆蓋、cwd 預設 exe 目錄、assign 到 kill-on-close Job

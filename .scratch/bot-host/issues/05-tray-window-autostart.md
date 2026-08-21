@@ -4,7 +4,7 @@
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** done (2026-08-21, dev-mode verified; pending live acceptance)
 
 - [ ] tray-icon feature＋選單；close→prevent+hide
 - [ ] single-instance plugin → show+focus

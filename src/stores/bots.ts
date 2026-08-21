@@ -54,6 +54,7 @@ export const useBotsStore = defineStore("bots", () => {
     statuses.value = Object.fromEntries(list.map((s) => [s.id, s]));
   }
 
+  let listening = false;
   async function init() {
     await run(async () => {
       await refresh();
@@ -61,6 +62,8 @@ export const useBotsStore = defineStore("bots", () => {
       configPath.value = await invoke<string>("config_path");
       hostAutostart.value = await invoke<boolean>("get_host_autostart");
     });
+    if (listening) return;
+    listening = true;
     await listen<StateEvent>("bot-state", (e) => {
       statuses.value[e.payload.id] = e.payload;
     });
