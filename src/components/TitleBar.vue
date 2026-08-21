@@ -19,7 +19,7 @@ function hide() {
 <template>
   <header class="titlebar" data-tauri-drag-region>
     <div class="brand" data-tauri-drag-region>
-      <span class="brand-mark" data-tauri-drag-region></span>
+      <img class="brand-mark" src="../assets/icon.png" alt="" data-tauri-drag-region />
       <span class="brand-name" data-tauri-drag-region>KZ Bot Host</span>
     </div>
     <div class="actions">
@@ -59,10 +59,10 @@ function hide() {
 }
 
 .brand-mark {
-  width: 9px;
-  height: 9px;
-  border-radius: 2px;
-  background: var(--ink);
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  display: block;
 }
 
 .brand-name {
