@@ -1,6 +1,6 @@
 [package]
 name = "kz-discord-host"
-version = "0.1.0"
+version = "1.0.0"
 description = "KZ Discord Host - keeps Discord bots running from the Windows tray"
 authors = ["scorp"]
 edition = "2021"
