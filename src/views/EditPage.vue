@@ -28,7 +28,7 @@ async function pickCwd() {
 }
 
 function addEnv() {
-  form.env.push({ name: "", value: "", secret: false });
+  form.env.push({ name: "", value: "", secret: true });
   revealed.value.push(false);
 }
 
@@ -40,7 +40,8 @@ function removeEnv(i: number) {
 async function save() {
   if (!form.name.trim()) return void (store.error = "名稱不可為空");
   if (!form.exe.trim()) return void (store.error = "執行檔不可為空");
-  const env: EnvVar[] = form.env.filter((e) => e.name.trim()).map((e) => ({ ...e, name: e.name.trim() }));
+  // Every value is treated as secret (masked in the UI); there is no per-row switch.
+  const env: EnvVar[] = form.env.filter((e) => e.name.trim()).map((e) => ({ ...e, name: e.name.trim(), secret: true }));
   const spec: BotSpec = {
     ...form,
     name: form.name.trim(),
@@ -75,7 +76,7 @@ async function save() {
         <div class="set-row">
           <span class="set-title fixed">名稱</span>
           <input v-model="form.name" type="text" class="path-input" placeholder="顯示在清單上的名字" spellcheck="false" />
-          <span class="set-title">自啟</span>
+          <span class="set-title">開啟時自啟</span>
           <button
             class="pill-switch"
             role="switch"
@@ -97,7 +98,7 @@ async function save() {
 
       <div class="set-card">
         <div class="set-row">
-          <span class="set-title" data-tip="token 之類的設定放這裡；設成機密的值平常以圓點遮住">環境變數</span>
+          <span class="set-title" data-tip="token 之類的設定放這裡；值平常以圓點遮住，按「顯示」才看得到">環境變數</span>
           <button class="btn-browse" @click="addEnv">新增一列</button>
         </div>
         <template v-for="(e, i) in form.env" :key="i">
@@ -106,14 +107,13 @@ async function save() {
             <input v-model="e.name" type="text" class="path-input env-name" placeholder="名稱" spellcheck="false" />
             <input
               v-model="e.value"
-              :type="e.secret && !revealed[i] ? 'password' : 'text'"
+              :type="revealed[i] ? 'text' : 'password'"
               class="path-input"
               :placeholder="e.description || '值'"
               autocomplete="off"
               spellcheck="false"
             />
-            <button v-if="e.secret" class="btn-browse" @click="revealed[i] = !revealed[i]">{{ revealed[i] ? "隱藏" : "顯示" }}</button>
-            <button class="btn-browse" :class="{ lock: e.secret }" data-tip="機密：值平常以圓點遮住" @click="e.secret = !e.secret">機密</button>
+            <button class="btn-browse" @click="revealed[i] = !revealed[i]">{{ revealed[i] ? "隱藏" : "顯示" }}</button>
             <button class="btn-browse danger" data-tip="刪除這一列" @click="removeEnv(i)">刪除</button>
           </div>
         </template>
@@ -177,10 +177,6 @@ async function save() {
 }
 .env-name {
   flex: 0 0 120px;
-}
-.lock {
-  color: var(--accent);
-  border-color: var(--accent);
 }
 .btn-browse.danger:hover:not(:disabled) {
   color: var(--danger);
