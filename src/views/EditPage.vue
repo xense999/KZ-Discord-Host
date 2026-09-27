@@ -47,10 +47,7 @@ async function save() {
 <template>
   <section class="card page">
     <div class="bar">
-      <button class="btn-browse" data-tip="不儲存，回到清單" @click="store.home()">返回</button>
       <span class="bar-title">{{ page.title }}</span>
-      <div class="spacer"></div>
-      <button class="primary sm" @click="save">儲存</button>
     </div>
 
     <div class="set-scroll">
@@ -103,6 +100,11 @@ async function save() {
         </template>
       </div>
     </div>
+
+    <div class="foot">
+      <button data-tip="不儲存，回到清單" @click="store.home()">返回</button>
+      <button class="primary" @click="save">儲存</button>
+    </div>
   </section>
 </template>
 
@@ -122,6 +124,17 @@ async function save() {
   gap: var(--sp-3);
   padding: 0 var(--sp-4);
   border-bottom: 0.5px solid var(--border);
+}
+/* Fixed bottom bar, same as the list card's 匯入／新增 footer so both cards end on one line. */
+.foot {
+  flex: none;
+  display: flex;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  border-top: 0.5px solid var(--border);
+}
+.foot button {
+  flex: 1;
 }
 /* The inner cards sit one step darker so they still read as cards inside the outer one. */
 .page .set-card {
