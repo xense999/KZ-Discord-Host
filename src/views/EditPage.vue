@@ -47,6 +47,11 @@ async function save() {
 <template>
   <section class="card page">
     <div class="bar">
+      <button class="back" data-tip="不儲存，回到清單" aria-label="返回" @click="store.home()">
+        <svg viewBox="0 0 12 12" width="14" height="14" aria-hidden="true">
+          <path d="M7.5 2.5 4 6l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </button>
       <span class="bar-title">{{ page.title }}</span>
     </div>
 
@@ -139,6 +144,22 @@ async function save() {
 /* The inner cards sit one step darker so they still read as cards inside the outer one. */
 .page .set-card {
   background: var(--bg-2);
+}
+/* Icon-only back button; same look as the title bar's gear (32px, no border). */
+.back {
+  width: 32px;
+  height: 32px;
+  margin-left: -8px;
+  padding: 0;
+  flex: none;
+  color: var(--text-dim);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-xs);
+}
+.back:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--hover);
 }
 .bar-title {
   font-size: 15px;
