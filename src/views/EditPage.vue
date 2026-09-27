@@ -85,7 +85,11 @@ async function save() {
       <div class="set-card">
         <div class="set-row">
           <span class="set-title" data-tip="token 之類的設定放這裡；值平常以圓點遮住，按「顯示」才看得到">環境變數</span>
-          <button class="btn-browse" @click="addEnv">新增一列</button>
+          <button class="icon-btn" data-tip="新增一列" aria-label="新增一列" @click="addEnv">
+            <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
+              <path d="M6 2v8M2 6h8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+            </svg>
+          </button>
         </div>
         <template v-for="(e, i) in form.env" :key="i">
           <div class="set-sep"></div>
@@ -145,11 +149,11 @@ async function save() {
 .page .set-card {
   background: var(--bg-2);
 }
-/* Icon-only back button; same look as the title bar's gear (32px, no border). */
-.back {
+/* Icon-only buttons (back arrow, add row); same look as the title bar's gear, no border. */
+.back,
+.icon-btn {
   width: 32px;
   height: 32px;
-  margin-left: -8px;
   padding: 0;
   flex: none;
   color: var(--text-dim);
@@ -157,7 +161,15 @@ async function save() {
   border: none;
   border-radius: var(--radius-xs);
 }
-.back:hover:not(:disabled) {
+.icon-btn {
+  width: 28px;
+  height: 28px;
+}
+.back {
+  margin-left: -8px;
+}
+.back:hover:not(:disabled),
+.icon-btn:hover:not(:disabled) {
   color: var(--text);
   background: var(--hover);
 }
