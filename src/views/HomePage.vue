@@ -61,8 +61,8 @@ async function importFolder() {
         <p v-if="store.bots.length === 0" class="empty">還沒有任何 bot。有 bot.toml 的按「匯入」，其他的按「新增」手動填。</p>
       </div>
       <div class="list-foot">
-        <button class="primary" data-tip="手動填寫執行檔與 token" @click="addBot">新增</button>
         <button data-tip="選一個有 bot.toml 的資料夾，設定自動帶入" @click="importFolder">匯入</button>
+        <button class="primary" data-tip="手動填寫執行檔與 token" @click="addBot">新增</button>
       </div>
     </section>
 
