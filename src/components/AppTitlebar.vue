@@ -87,9 +87,11 @@ onUnmounted(() => {
 .titlebar.child {
   padding-left: var(--sp-4);
 }
+/* line-height 1 so the name centres on the same line as the gear and window buttons. */
 .brand {
   font-size: 16px;
   font-weight: 700;
+  line-height: 1;
   letter-spacing: 0.02em;
   color: var(--text-strong);
 }

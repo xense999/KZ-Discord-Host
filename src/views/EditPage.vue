@@ -173,9 +173,12 @@ async function save() {
   color: var(--text);
   background: var(--hover);
 }
+/* line-height 1: with the inherited 1.5 the line box is taller than the glyphs
+   and JhengHei sits off-centre in it, so the text looks lower than the arrow. */
 .bar-title {
   font-size: 15px;
   font-weight: 600;
+  line-height: 1;
   color: var(--text-strong);
 }
 /* Breathing room between the bar and the first card. */
