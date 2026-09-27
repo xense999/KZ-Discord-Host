@@ -15,7 +15,7 @@ const revealed = ref<boolean[]>(draft.env.map(() => false));
 // Arguments and working directory are rarely needed; keep them folded unless already set.
 const advanced = ref(draft.args.length > 0 || !!draft.cwd);
 
-const missingSecrets = computed(() => form.env.filter((e) => e.secret && !e.value).map((e) => e.name));
+const missingSecrets = computed(() => form.env.filter((e) => e.name.trim() && !e.value).map((e) => e.name.trim()));
 
 async function pickExe() {
   const file = await open({ multiple: false, filters: [{ name: "執行檔", extensions: ["exe", "bat", "cmd"] }], title: "選擇 bot 執行檔" });
