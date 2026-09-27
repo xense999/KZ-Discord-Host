@@ -13,11 +13,14 @@ pub struct AppState {
     pub startup_notice: Option<String>,
     /// Query string waiting for a child window (by label) to pick up on mount.
     pub routes: Mutex<HashMap<String, String>>,
+    /// Serialises saves: they all go through the same `.tmp` file.
+    pub persist_lock: Mutex<()>,
 }
 
 impl AppState {
     /// Write the supervisor's current bot list to `config.json`.
     pub fn persist(&self) -> Result<(), String> {
+        let _guard = self.persist_lock.lock().unwrap();
         let cfg = Config { bots: self.supervisor.specs(), ..Config::default() };
         config::save(&config::config_path(), &cfg).map_err(|e| e.to_string())
     }

@@ -20,7 +20,8 @@
 
 - 前端不持有權威狀態：狀態只來自 `list_status` 與 `bot-state` 事件。
 - `init` 先訂閱事件再拉快照，中間不漏事件；每隻 bot 的 ring tail 只拉一次（`tailLoaded`），之後靠事件。
-- log 事件合批（rAF）且每隻最多 500 行。
+- log 事件以 100 ms `setTimeout` 合批（不用 rAF：視窗藏在系統匣時 rAF 會暫停、佇列無限長大），每隻最多 500 行。
+- 只有主視窗 `init()` 訂閱 bot 狀態與 log；設定視窗用 `loadSettings()`，不收 log。
 
 ## 禁止
 

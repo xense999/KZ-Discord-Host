@@ -41,16 +41,18 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
-            let (cfg, notice) = match config::load(&config::config_path()) {
-                Ok(c) => (c, None),
-                Err(e) => (config::Config::default(), Some(e.to_string())),
-            };
+            let (cfg, notice) = config::load_or_back_up(&config::config_path());
             let sink = Arc::new(TauriSink(app.handle().clone()));
-            let supervisor = Supervisor::new(sink, config::logs_dir(), &cfg.bots)?;
+            let supervisor = Supervisor::new(sink, config::logs_dir(), &cfg.bots);
             for bot in cfg.bots.iter().filter(|b| b.autostart) {
                 let _ = supervisor.start(&bot.id);
             }
-            app.manage(AppState { supervisor, startup_notice: notice, routes: Default::default() });
+            app.manage(AppState {
+                supervisor,
+                startup_notice: notice,
+                routes: Default::default(),
+                persist_lock: Default::default(),
+            });
             tray::setup(app.handle())?;
             if !autostart::launched_minimized() {
                 tray::show_main(app.handle());

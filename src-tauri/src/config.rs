@@ -13,7 +13,7 @@ pub const SCHEMA_VERSION: u32 = 1;
 pub enum ConfigError {
     #[error("讀取設定檔失敗：{0}")]
     Io(#[from] std::io::Error),
-    #[error("設定檔格式錯誤（已保留原檔不覆寫）：{0}")]
+    #[error("設定檔格式錯誤：{0}")]
     Parse(#[from] serde_json::Error),
 }
 
@@ -127,6 +127,22 @@ pub fn load(path: &Path) -> Result<Config, ConfigError> {
     }
 }
 
+/// Startup load. On failure the host starts empty and the next save would
+/// replace the file, so a copy is taken first; the returned notice says where.
+pub fn load_or_back_up(path: &Path) -> (Config, Option<String>) {
+    let err = match load(path) {
+        Ok(cfg) => return (cfg, None),
+        Err(e) => e,
+    };
+    let stamp = chrono::Local::now().format("%Y%m%d-%H%M%S");
+    let backup = path.with_extension(format!("json.broken-{stamp}"));
+    let notice = match fs::copy(path, &backup) {
+        Ok(_) => format!("{err}。原檔已備份到 {}", backup.display()),
+        Err(e) => format!("{err}。備份原檔失敗（{e}），之後的改動會覆寫它"),
+    };
+    (Config::default(), Some(notice))
+}
+
 /// Atomic save: write `<path>.tmp` then rename over `path`.
 pub fn save(path: &Path, config: &Config) -> Result<(), ConfigError> {
     if let Some(parent) = path.parent() {
@@ -195,6 +211,31 @@ mod tests {
         fs::write(&path, b"{ not json").unwrap();
         assert!(matches!(load(&path), Err(ConfigError::Parse(_))));
         assert_eq!(fs::read(&path).unwrap(), b"{ not json");
+    }
+
+    #[test]
+    fn broken_file_is_backed_up_before_starting_empty() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.json");
+        fs::write(&path, b"{ not json").unwrap();
+        let (cfg, notice) = load_or_back_up(&path);
+        assert_eq!(cfg, Config::default());
+        assert!(notice.unwrap().contains("備份到"));
+        let backups: Vec<_> = fs::read_dir(dir.path())
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_name().to_string_lossy().starts_with("config.json.broken-"))
+            .collect();
+        assert_eq!(backups.len(), 1);
+        assert_eq!(fs::read(backups[0].path()).unwrap(), b"{ not json");
+    }
+
+    #[test]
+    fn good_file_loads_without_notice() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.json");
+        save(&path, &sample()).unwrap();
+        assert_eq!(load_or_back_up(&path), (sample(), None));
     }
 
     #[test]

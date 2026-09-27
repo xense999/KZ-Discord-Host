@@ -1,11 +1,12 @@
-//! Child process spawning (no console window) and the kill-on-close Job Object
-//! that guarantees every bot dies with the host.
+//! Child process spawning (no console window), the kill-on-close Job Object
+//! that owns each run's whole process tree, and decoding of bot output.
 
 use std::io;
 use std::process::Stdio;
 
 use tokio::process::{Child, Command};
 use windows::Win32::Foundation::{CloseHandle, HANDLE};
+use windows::Win32::Globalization::{CP_ACP, MULTI_BYTE_TO_WIDE_CHAR_FLAGS, MultiByteToWideChar};
 use windows::Win32::System::JobObjects::{
     AssignProcessToJobObject, CreateJobObjectW, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
     JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JobObjectExtendedLimitInformation,
@@ -16,8 +17,9 @@ use windows::core::PCWSTR;
 
 use crate::config::BotSpec;
 
-/// Windows Job Object with `KILL_ON_JOB_CLOSE`: when the last handle closes
-/// (host exits or is killed) every assigned process is terminated.
+/// Windows Job Object with `KILL_ON_JOB_CLOSE`: when the handle closes (the
+/// `Job` is dropped, or the host exits / is killed) every process in it is
+/// terminated, including children the bot spawned itself.
 pub struct Job(HANDLE);
 
 // HANDLE is a raw pointer newtype; a job handle is safe to share across threads.
@@ -60,8 +62,10 @@ impl Drop for Job {
 }
 
 /// Spawn the bot described by `spec`: hidden window, stdout/stderr piped,
-/// inherited environment overlaid with `spec.env`, assigned to `job`.
-pub fn spawn(spec: &BotSpec, job: &Job) -> io::Result<Child> {
+/// inherited environment overlaid with `spec.env`, placed in a Job of its own.
+/// Dropping the returned `Job` kills the bot together with anything it spawned.
+pub fn spawn(spec: &BotSpec) -> io::Result<(Child, Job)> {
+    let job = Job::new()?;
     let mut cmd = Command::new(&spec.exe);
     cmd.args(&spec.args)
         .stdin(Stdio::null())
@@ -79,7 +83,24 @@ pub fn spawn(spec: &BotSpec, job: &Job) -> io::Result<Child> {
     }
     let child = cmd.spawn()?;
     job.assign(&child)?;
-    Ok(child)
+    Ok((child, job))
+}
+
+/// One line of bot output as text: UTF-8 when it is valid, otherwise the
+/// system ANSI code page (Big5 on zh-TW), which is what Python and most
+/// Windows programs write to a pipe.
+pub fn decode_output(bytes: &[u8]) -> String {
+    if let Ok(text) = std::str::from_utf8(bytes) {
+        return text.to_string();
+    }
+    let flags = MULTI_BYTE_TO_WIDE_CHAR_FLAGS(0);
+    let len = unsafe { MultiByteToWideChar(CP_ACP, flags, bytes, None) };
+    if len <= 0 {
+        return String::from_utf8_lossy(bytes).into_owned();
+    }
+    let mut wide = vec![0u16; len as usize];
+    let written = unsafe { MultiByteToWideChar(CP_ACP, flags, bytes, Some(&mut wide)) };
+    String::from_utf16_lossy(&wide[..written.max(0) as usize])
 }
 
 #[cfg(test)]
@@ -102,14 +123,13 @@ mod tests {
 
     #[tokio::test]
     async fn spawn_captures_stdout_and_env() {
-        let job = Job::new().unwrap();
         let mut spec = cmd_spec(&["/c", "echo hello %KZ_TEST_VAR%"]);
         spec.env.push(crate::config::EnvVar {
             name: "KZ_TEST_VAR".into(),
             value: "world".into(),
             ..Default::default()
         });
-        let mut child = spawn(&spec, &job).unwrap();
+        let (mut child, _job) = spawn(&spec).unwrap();
         let stdout = child.stdout.take().unwrap();
         let mut lines = BufReader::new(stdout).lines();
         let first = lines.next_line().await.unwrap().unwrap();
@@ -120,8 +140,7 @@ mod tests {
 
     #[tokio::test]
     async fn kill_terminates_child() {
-        let job = Job::new().unwrap();
-        let mut child = spawn(&cmd_spec(&["/c", "ping -n 30 127.0.0.1 >nul"]), &job).unwrap();
+        let (mut child, _job) = spawn(&cmd_spec(&["/c", "ping -n 30 127.0.0.1 >nul"])).unwrap();
         child.kill().await.unwrap();
         let status = tokio::time::timeout(Duration::from_secs(5), child.wait())
             .await
@@ -132,8 +151,7 @@ mod tests {
 
     #[tokio::test]
     async fn dropping_job_kills_assigned_children() {
-        let job = Job::new().unwrap();
-        let mut child = spawn(&cmd_spec(&["/c", "ping -n 30 127.0.0.1 >nul"]), &job).unwrap();
+        let (mut child, job) = spawn(&cmd_spec(&["/c", "ping -n 30 127.0.0.1 >nul"])).unwrap();
         let t = std::time::Instant::now();
         drop(job);
         // Exit code after a job kill is unspecified; what matters is that a
@@ -143,5 +161,16 @@ mod tests {
             .expect("child must die when the job closes")
             .unwrap();
         assert!(t.elapsed() < Duration::from_secs(5));
+    }
+
+    #[test]
+    fn decode_output_keeps_utf8_and_falls_back_to_ansi_code_page() {
+        assert_eq!(decode_output("測試 ok".as_bytes()), "測試 ok");
+        let big5 = [0xB4, 0xFA, 0xB8, 0xD5];
+        let text = decode_output(&big5);
+        assert!(!text.is_empty());
+        if unsafe { windows::Win32::Globalization::GetACP() } == 950 {
+            assert_eq!(text, "測試");
+        }
     }
 }

@@ -36,7 +36,9 @@ export const useBotsStore = defineStore("bots", () => {
     pending.push(ev);
     if (!flushScheduled) {
       flushScheduled = true;
-      requestAnimationFrame(flushLogs);
+      // Not rAF: it pauses while the window sits hidden in the tray, and the
+      // queue would grow without bound.
+      window.setTimeout(flushLogs, 100);
     }
   }
 
@@ -71,6 +73,12 @@ export const useBotsStore = defineStore("bots", () => {
     await run(async () => {
       await refresh();
       startupNotice.value = await invoke<string | null>("startup_notice");
+    });
+  }
+
+  /** Settings window only: it shows no bots or logs, so it does not subscribe to them. */
+  async function loadSettings() {
+    await run(async () => {
       configPath.value = await invoke<string>("config_path");
       hostAutostart.value = await invoke<boolean>("get_host_autostart");
     });
@@ -142,6 +150,7 @@ export const useBotsStore = defineStore("bots", () => {
     hostAutostart,
     configPath,
     init,
+    loadSettings,
     refresh,
     select,
     start,

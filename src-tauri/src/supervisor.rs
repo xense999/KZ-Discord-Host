@@ -12,7 +12,7 @@ use tokio::sync::oneshot;
 
 use crate::config::BotSpec;
 use crate::logs::{BotLogger, LogLine, Stream};
-use crate::process::{self, Job};
+use crate::process;
 
 pub const BACKOFF_BASE: Duration = Duration::from_secs(3);
 pub const BACKOFF_MAX: Duration = Duration::from_secs(300);
@@ -102,24 +102,18 @@ struct Slot {
 }
 
 pub struct Supervisor {
-    job: Arc<Job>,
     sink: Arc<dyn EventSink>,
     logs_dir: PathBuf,
     slots: Mutex<Vec<Slot>>,
 }
 
 impl Supervisor {
-    pub fn new(sink: Arc<dyn EventSink>, logs_dir: PathBuf, bots: &[BotSpec]) -> std::io::Result<Self> {
-        let sup = Self {
-            job: Arc::new(Job::new()?),
-            sink,
-            logs_dir,
-            slots: Mutex::new(Vec::new()),
-        };
+    pub fn new(sink: Arc<dyn EventSink>, logs_dir: PathBuf, bots: &[BotSpec]) -> Self {
+        let sup = Self { sink, logs_dir, slots: Mutex::new(Vec::new()) };
         for spec in bots {
             sup.upsert(spec.clone());
         }
-        Ok(sup)
+        sup
     }
 
     /// Add or replace a bot definition. A running bot keeps running with its
@@ -141,9 +135,18 @@ impl Supervisor {
         }
     }
 
+    /// Take the slot out first so no `start` can reach it, then stop its run.
     pub async fn remove(&self, id: &str) -> Result<(), String> {
-        self.stop(id).await?;
-        self.slots.lock().unwrap().retain(|s| s.shared.id != id);
+        let slot = {
+            let mut slots = self.slots.lock().unwrap();
+            let i = slots.iter().position(|s| s.shared.id == id).ok_or_else(|| not_found(id))?;
+            slots.remove(i)
+        };
+        if let Some(mut run) = slot.run {
+            if let (Some(stop_tx), Some(done)) = (run.stop_tx.take(), run.done.take()) {
+                finish_run(&slot.shared, stop_tx, done).await;
+            }
+        }
         Ok(())
     }
 
@@ -182,12 +185,7 @@ impl Supervisor {
         }
         slot.shared.restarts.store(0, Ordering::Relaxed);
         let (stop_tx, stop_rx) = oneshot::channel();
-        let done = tauri::async_runtime::spawn(supervise(
-            slot.shared.clone(),
-            slot.spec.clone(),
-            self.job.clone(),
-            stop_rx,
-        ));
+        let done = tauri::async_runtime::spawn(supervise(slot.shared.clone(), slot.spec.clone(), stop_rx));
         slot.run = Some(Run { stop_tx: Some(stop_tx), done: Some(done) });
         Ok(())
     }
@@ -211,9 +209,8 @@ impl Supervisor {
         }
     }
 
-    /// Take the run's handles (leaving the slot occupied), signal stop, wait;
-    /// on timeout abort the task (its child is `kill_on_drop`). Only then
-    /// free the slot so a new start cannot overlap the dying process.
+    /// Take the run's handles (leaving the slot occupied) and stop it. Only
+    /// then free the slot so a new start cannot overlap the dying process.
     async fn stop_shared(&self, shared: &Arc<Shared>) {
         let taken = {
             let mut slots = self.slots.lock().unwrap();
@@ -221,23 +218,32 @@ impl Supervisor {
             let Some(run) = slot.run.as_mut() else { return };
             (run.stop_tx.take(), run.done.take())
         };
-        let (Some(stop_tx), Some(mut done)) = taken else {
+        let (Some(stop_tx), Some(done)) = taken else {
             // Another stop is already in flight; it owns the cleanup.
             return;
         };
-        shared.set_state(BotState::Stopping);
-        let _ = stop_tx.send(());
-        if tokio::time::timeout(STOP_TIMEOUT, &mut done).await.is_err() {
-            done.abort();
-            shared.log(Stream::System, "停止逾時，強制終止");
-        }
-        let mut slots = self.slots.lock().unwrap();
-        if let Some(slot) = slots.iter_mut().find(|s| s.shared.id == shared.id) {
+        finish_run(shared, stop_tx, done).await;
+        if let Some(slot) = self.slots.lock().unwrap().iter_mut().find(|s| s.shared.id == shared.id) {
             slot.run = None;
         }
-        if *shared.state.lock().unwrap() != BotState::Stopped {
-            shared.set_state(BotState::Stopped);
-        }
+    }
+}
+
+/// Signal stop and wait; on timeout abort the task (dropping its Job kills
+/// the process tree).
+async fn finish_run(
+    shared: &Shared,
+    stop_tx: oneshot::Sender<()>,
+    mut done: tauri::async_runtime::JoinHandle<()>,
+) {
+    shared.set_state(BotState::Stopping);
+    let _ = stop_tx.send(());
+    if tokio::time::timeout(STOP_TIMEOUT, &mut done).await.is_err() {
+        done.abort();
+        shared.log(Stream::System, "停止逾時，強制終止");
+    }
+    if *shared.state.lock().unwrap() != BotState::Stopped {
+        shared.set_state(BotState::Stopped);
     }
 }
 
@@ -255,20 +261,31 @@ where
 {
     tauri::async_runtime::spawn(async move {
         let Some(reader) = reader else { return };
-        let mut lines = BufReader::new(reader).lines();
-        while let Ok(Some(line)) = lines.next_line().await {
-            shared.log(stream, line);
+        // Raw bytes, not `lines()`: one non-UTF-8 line must not end the
+        // reader, or the undrained pipe fills up and the bot blocks on write.
+        let mut reader = BufReader::new(reader);
+        let mut buf = Vec::new();
+        loop {
+            buf.clear();
+            match reader.read_until(b'\n', &mut buf).await {
+                Ok(0) | Err(_) => break,
+                Ok(_) => {}
+            }
+            while matches!(buf.last(), Some(b'\n' | b'\r')) {
+                buf.pop();
+            }
+            shared.log(stream, process::decode_output(&buf));
         }
     })
 }
 
-async fn supervise(shared: Arc<Shared>, spec: BotSpec, job: Arc<Job>, mut stop_rx: oneshot::Receiver<()>) {
+async fn supervise(shared: Arc<Shared>, spec: BotSpec, mut stop_rx: oneshot::Receiver<()>) {
     let mut attempt: u32 = 0;
     loop {
         shared.set_state(BotState::Starting);
-        match process::spawn(&spec, &job) {
+        match process::spawn(&spec) {
             Err(e) => shared.log(Stream::System, format!("啟動失敗：{e}")),
-            Ok(mut child) => {
+            Ok((mut child, job)) => {
                 let pid = child.id().unwrap_or(0);
                 let started = Instant::now();
                 shared.set_state(BotState::Running { pid, since_ms: now_ms() });
@@ -279,15 +296,17 @@ async fn supervise(shared: Arc<Shared>, spec: BotSpec, job: Arc<Job>, mut stop_r
                     status = child.wait() => Some(status),
                     _ = &mut stop_rx => None,
                 };
+                // Kill the whole tree (on a crash: whatever the bot left
+                // behind). That also closes pipes a grandchild inherited, so
+                // the readers can finish.
+                drop(job);
+                let _ = child.wait().await;
+                let _ = tokio::join!(out, err);
                 let Some(status) = exit else {
-                    let _ = child.kill().await;
-                    let _ = child.wait().await;
-                    let _ = tokio::join!(out, err);
                     shared.log(Stream::System, "已停止");
                     shared.set_state(BotState::Stopped);
                     return;
                 };
-                let _ = tokio::join!(out, err);
                 let code = status.ok().and_then(|s| s.code());
                 shared.log(
                     Stream::System,
@@ -369,8 +388,7 @@ mod tests {
             Arc::new(ChannelSink(Mutex::new(tx))),
             dir.path().to_path_buf(),
             &[cmd_spec("crash", &["/c", "exit 1"])],
-        )
-        .unwrap();
+        );
 
         sup.start("crash").unwrap();
         wait_for(&rx, |s| matches!(s, BotState::Running { .. }));
@@ -398,8 +416,7 @@ mod tests {
             Arc::new(ChannelSink(Mutex::new(tx))),
             dir.path().to_path_buf(),
             &[cmd_spec("long", &["/c", "ping -n 60 127.0.0.1 >nul"])],
-        )
-        .unwrap();
+        );
         sup.start("long").unwrap();
         wait_for(&rx, |s| matches!(s, BotState::Running { .. }));
         let t = Instant::now();
@@ -413,5 +430,59 @@ mod tests {
         wait_for(&rx, |s| matches!(s, BotState::Running { .. }));
         sup.shutdown_all().await;
         assert!(sup.statuses().iter().all(|s| s.state == BotState::Stopped));
+    }
+
+    #[tokio::test]
+    async fn stop_also_kills_what_the_bot_spawned() {
+        // cmd starts ping as its own child, and ping holds the stdout pipe.
+        let (tx, rx) = mpsc::channel();
+        let dir = tempfile::tempdir().unwrap();
+        let sup = Supervisor::new(
+            Arc::new(ChannelSink(Mutex::new(tx))),
+            dir.path().to_path_buf(),
+            &[cmd_spec("tree", &["/c", "ping -n 60 127.0.0.1"])],
+        );
+        sup.start("tree").unwrap();
+        wait_for(&rx, |s| matches!(s, BotState::Running { .. }));
+        tokio::time::sleep(Duration::from_millis(500)).await;
+        let t = Instant::now();
+        sup.stop("tree").await.unwrap();
+        assert!(t.elapsed() < Duration::from_secs(5), "stop took {:?}", t.elapsed());
+        let tail = sup.log_tail("tree").unwrap();
+        assert!(!tail.iter().any(|l| l.line.contains("逾時")), "{tail:?}");
+    }
+
+    #[tokio::test]
+    async fn non_utf8_output_does_not_stop_the_log() {
+        let (tx, rx) = mpsc::channel();
+        let dir = tempfile::tempdir().unwrap();
+        let text = dir.path().join("big5.txt");
+        std::fs::write(&text, b"before\r\n\xB4\xFA\xB8\xD5\r\nafter\r\n").unwrap();
+        let mut spec = cmd_spec("enc", &["/c", "type big5.txt"]);
+        spec.cwd = Some(dir.path().to_path_buf());
+        let sup = Supervisor::new(Arc::new(ChannelSink(Mutex::new(tx))), dir.path().to_path_buf(), &[spec]);
+        sup.start("enc").unwrap();
+        wait_for(&rx, |s| matches!(s, BotState::Backoff { .. }));
+        let lines: Vec<String> = sup.log_tail("enc").unwrap().into_iter().map(|l| l.line).collect();
+        assert!(lines.contains(&"before".to_string()), "{lines:?}");
+        assert!(lines.contains(&"after".to_string()), "{lines:?}");
+        sup.shutdown_all().await;
+    }
+
+    #[tokio::test]
+    async fn remove_stops_the_bot_and_frees_the_id() {
+        let (tx, rx) = mpsc::channel();
+        let dir = tempfile::tempdir().unwrap();
+        let sup = Supervisor::new(
+            Arc::new(ChannelSink(Mutex::new(tx))),
+            dir.path().to_path_buf(),
+            &[cmd_spec("gone", &["/c", "ping -n 60 127.0.0.1 >nul"])],
+        );
+        sup.start("gone").unwrap();
+        wait_for(&rx, |s| matches!(s, BotState::Running { .. }));
+        sup.remove("gone").await.unwrap();
+        wait_for(&rx, |s| *s == BotState::Stopped);
+        assert!(sup.start("gone").is_err(), "a removed bot cannot be started");
+        assert!(sup.statuses().is_empty());
     }
 }

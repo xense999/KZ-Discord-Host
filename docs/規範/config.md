@@ -6,6 +6,7 @@
 
 - 型別 `Config { schema_version, bots }`、`BotSpec { id, name, exe, args, cwd?, env, autostart }`、`EnvVar { name, value, secret, description? }`。
 - `load(path) -> Result<Config, ConfigError>`：檔案不存在＝預設；壞檔＝Err 且原檔不動。
+- `load_or_back_up(path) -> (Config, Option<String>)`：啟動用；讀失敗時先把原檔複製成 `config.json.broken-<時間>`，回空白設定＋給 UI 的提示字串。
 - `save(path, &Config)`：寫 `.json.tmp` 再 rename（原子）。
 - `app_dir()`／`config_path()`／`logs_dir()`：`%APPDATA%\KZ Bot Host\…` 的唯一出處。
 - `BotSpec::new_id()`、`BotSpec::effective_cwd()`、`BotSpec::normalize() -> Result<(), String>`（trim／空名空 exe 拒絕／補 id）。
@@ -19,7 +20,8 @@
 ## 不變量
 
 - `save` 後 `load` 必等值（round-trip 測試）。
-- 壞檔永不被覆寫，除非使用者之後做了會觸發 `persist` 的改動。
+- 壞檔在被 `persist` 覆寫前一定已有備份（備份失敗時提示字串會明講）。
+- `persist` 以 `AppState.persist_lock` 串行，兩個存檔不會同時寫同一個 `.tmp`。
 
 ## 禁止
 

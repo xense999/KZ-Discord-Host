@@ -47,7 +47,7 @@ const openSettings = () => store.openWindow("settings");
   </TitleBar>
 
   <div v-if="store.startupNotice" class="banner banner-warn notice">
-    設定檔讀取失敗，目前以空白設定啟動（原檔未被覆寫）：{{ store.startupNotice }}
+    設定檔讀取失敗，目前以空白設定啟動：{{ store.startupNotice }}
   </div>
   <div v-if="store.error" class="banner banner-error notice" @click="store.error = null">
     {{ store.error }}

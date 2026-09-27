@@ -5,7 +5,7 @@ import TitleBar from "./TitleBar.vue";
 import SettingsPanel from "./SettingsPanel.vue";
 
 const store = useBotsStore();
-onMounted(() => store.init());
+onMounted(() => store.loadSettings());
 </script>
 
 <template>
