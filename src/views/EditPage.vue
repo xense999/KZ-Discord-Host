@@ -60,98 +60,84 @@ async function save() {
 </script>
 
 <template>
-  <section class="card page">
+  <div class="page">
     <div class="bar">
-      <button class="plain back" data-tip="不儲存，回到清單" @click="store.home()">
-        <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
-          <path d="M7.5 2.5 4 6l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-        返回
-      </button>
+      <button class="btn-browse" data-tip="不儲存，回到清單" @click="store.home()">返回</button>
       <span class="bar-title">{{ page.title }}</span>
       <div class="spacer"></div>
-      <button class="primary" @click="save">儲存</button>
+      <button class="primary sm" @click="save">儲存</button>
     </div>
 
-    <div class="body">
+    <div class="set-scroll">
       <p v-if="missingSecrets.length" class="warn">還要填：{{ missingSecrets.join("、") }}</p>
 
-      <section class="group">
-        <div class="field">
-          <label>名稱</label>
-          <input v-model="form.name" type="text" placeholder="顯示在清單上的名字" />
+      <div class="set-card">
+        <div class="set-row">
+          <span class="set-title fixed">名稱</span>
+          <input v-model="form.name" type="text" class="path-input" placeholder="顯示在清單上的名字" spellcheck="false" />
         </div>
-        <div class="field">
-          <label>執行檔</label>
-          <div class="inline">
-            <input v-model="form.exe" type="text" class="mono" placeholder="C:\bots\my-bot\bot.exe" />
-            <button @click="pickExe">瀏覽</button>
-          </div>
+        <div class="set-sep"></div>
+        <div class="set-row">
+          <span class="set-title fixed">執行檔</span>
+          <input v-model="form.exe" type="text" class="path-input" placeholder="C:\bots\my-bot\bot.exe" spellcheck="false" />
+          <button class="btn-browse" @click="pickExe">瀏覽</button>
         </div>
-        <div class="row">
-          <span class="row-title">
-            開啟程式時自動啟動
-            <span class="row-sub">久世 Discord Host 一開就把這隻 bot 拉起來</span>
-          </span>
-          <button class="switch" role="switch" :class="{ on: form.autostart }" :aria-checked="form.autostart" @click="form.autostart = !form.autostart"></button>
-        </div>
-      </section>
-
-      <section class="group">
-        <div class="card-head">
-          <span>環境變數</span>
-          <span class="head-sub">token 之類的設定放這裡</span>
-          <div class="spacer"></div>
-          <button class="plain sm" @click="addEnv">新增一列</button>
-        </div>
-        <p v-if="form.env.length === 0" class="none">沒有環境變數。</p>
-        <div v-for="(e, i) in form.env" :key="i" class="env">
-          <input v-model="e.name" type="text" class="mono env-name" placeholder="名稱，例如 DISCORD_TOKEN" />
-          <input
-            v-model="e.value"
-            :type="e.secret && !revealed[i] ? 'password' : 'text'"
-            class="mono env-value"
-            :placeholder="e.description || '值'"
-            autocomplete="off"
-          />
-          <button v-if="e.secret" class="plain sm" @click="revealed[i] = !revealed[i]">{{ revealed[i] ? "隱藏" : "顯示" }}</button>
-          <button
-            class="plain sm"
-            :class="{ lock: e.secret }"
-            :data-tip="e.secret ? '機密：值平常以圓點遮住' : '設為機密：值平常以圓點遮住'"
-            @click="e.secret = !e.secret"
-          >
-            機密
+        <div class="set-sep"></div>
+        <div class="set-row">
+          <span class="set-title" data-tip="久世 Discord Host 一開就把這隻 bot 拉起來">開啟程式時自動啟動</span>
+          <button class="pill-switch" role="switch" :class="{ on: form.autostart }" :aria-checked="form.autostart" @click="form.autostart = !form.autostart">
+            <span class="pill-knob"></span>
           </button>
-          <button class="plain sm danger" data-tip="刪除這一列" @click="removeEnv(i)">刪除</button>
         </div>
-      </section>
+      </div>
 
-      <section class="group">
-        <button class="fold" :aria-expanded="advanced" @click="advanced = !advanced">
-          <span>進階</span>
-          <span class="head-sub">啟動參數、工作目錄</span>
-          <div class="spacer"></div>
-          <svg :class="{ open: advanced }" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
-            <path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </button>
-        <template v-if="advanced">
-          <div class="field">
-            <label>啟動參數（一行一個）</label>
-            <textarea v-model="argsText" rows="2" class="mono"></textarea>
-          </div>
-          <div class="field">
-            <label>工作目錄</label>
-            <div class="inline">
-              <input v-model="form.cwd" type="text" class="mono" placeholder="留空＝執行檔所在的資料夾" />
-              <button @click="pickCwd">瀏覽</button>
-            </div>
+      <div class="set-card">
+        <div class="set-row">
+          <span class="set-title" data-tip="token 之類的設定放這裡；設成機密的值平常以圓點遮住">環境變數</span>
+          <button class="btn-browse" @click="addEnv">新增一列</button>
+        </div>
+        <template v-for="(e, i) in form.env" :key="i">
+          <div class="set-sep"></div>
+          <div class="path-row env">
+            <input v-model="e.name" type="text" class="path-input env-name" placeholder="名稱" spellcheck="false" />
+            <input
+              v-model="e.value"
+              :type="e.secret && !revealed[i] ? 'password' : 'text'"
+              class="path-input"
+              :placeholder="e.description || '值'"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <button v-if="e.secret" class="btn-browse" @click="revealed[i] = !revealed[i]">{{ revealed[i] ? "隱藏" : "顯示" }}</button>
+            <button class="btn-browse" :class="{ lock: e.secret }" data-tip="機密：值平常以圓點遮住" @click="e.secret = !e.secret">機密</button>
+            <button class="btn-browse danger" data-tip="刪除這一列" @click="removeEnv(i)">刪除</button>
           </div>
         </template>
-      </section>
+      </div>
+
+      <div class="set-card" :class="{ unfolded: advanced }">
+        <div class="set-row foldhead" @click="advanced = !advanced">
+          <span class="set-title" data-tip="啟動參數、工作目錄；大部分 bot 不需要">進階</span>
+          <svg class="foldchev" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
+            <path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </div>
+        <template v-if="advanced">
+          <div class="set-sep"></div>
+          <div class="set-row">
+            <span class="set-title fixed" data-tip="一行一個">啟動參數</span>
+            <textarea v-model="argsText" rows="2" class="path-input" spellcheck="false"></textarea>
+          </div>
+          <div class="set-sep"></div>
+          <div class="set-row">
+            <span class="set-title fixed">工作目錄</span>
+            <input v-model="form.cwd" type="text" class="path-input" placeholder="留空＝執行檔所在的資料夾" spellcheck="false" />
+            <button class="btn-browse" @click="pickCwd">瀏覽</button>
+          </div>
+        </template>
+      </div>
     </div>
-  </section>
+  </div>
 </template>
 
 <style scoped>
@@ -162,119 +148,37 @@ async function save() {
   flex-direction: column;
 }
 .bar {
-  height: 56px;
+  height: 48px;
   flex: none;
   display: flex;
   align-items: center;
-  gap: var(--sp-2);
-  padding: 0 var(--sp-3);
-  border-bottom: 0.5px solid var(--border);
-}
-.back {
-  padding: 0 10px;
+  gap: var(--sp-3);
 }
 .bar-title {
-  font-size: 17px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 600;
   color: var(--text-strong);
 }
-.body {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
+.page .set-scroll {
+  padding: 0 0 12px;
 }
 .warn {
-  padding: var(--sp-3) var(--sp-4);
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--warn);
-  border-bottom: 0.5px solid var(--border);
-}
-/* Groups inside the card are separated by a line, not nested cards. */
-.group {
-  border-bottom: 0.5px solid var(--border);
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: var(--sp-3) var(--sp-4);
-}
-.field + .field,
-.field + .row {
-  border-top: 0.5px solid var(--border);
-}
-.field label {
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-dim);
-}
-.inline {
-  display: flex;
-  gap: var(--sp-2);
-}
-.inline input {
-  flex: 1;
-  min-width: 0;
-}
-
-.head-sub {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-faint);
-}
-.none {
-  padding: var(--sp-3) var(--sp-4);
-  font-size: 15px;
-  color: var(--text-faint);
+  color: var(--warn);
 }
 .env {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  padding: var(--sp-2) var(--sp-4);
-}
-.env + .env {
-  border-top: 0.5px solid var(--border);
+  padding-top: 10px;
 }
 .env-name {
-  width: 220px;
-  flex: none;
-}
-.env-value {
-  flex: 1;
-  min-width: 0;
+  flex: 0 0 120px;
 }
 .lock {
   color: var(--accent);
-  background: var(--accent-soft);
+  border-color: var(--accent);
 }
-
-.fold {
-  width: 100%;
-  height: 48px;
-  justify-content: flex-start;
-  gap: var(--sp-2);
-  padding: 0 var(--sp-4);
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-strong);
-  background: transparent;
-  border: none;
-  border-radius: 0;
-}
-.fold:hover:not(:disabled) {
-  background: var(--hover);
-}
-.fold svg {
-  color: var(--text-dim);
-  transition: transform 0.15s ease;
-}
-.fold svg.open {
-  transform: rotate(180deg);
-}
-.fold + .field {
-  border-top: 0.5px solid var(--border);
+.btn-browse.danger:hover:not(:disabled) {
+  color: var(--danger);
+  background: var(--danger-soft);
 }
 </style>
