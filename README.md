@@ -143,7 +143,7 @@ description = "Discord bot token"  # 選填：顯示在輸入框裡的提示
 
 ## 貢獻者
 
-- [Kuze](https://github.com/xense999) — 作者
+- [久世](https://github.com/xense999) — 作者
 - [Claude](https://claude.ai) — AI 協作開發
 
 ---
