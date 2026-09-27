@@ -61,8 +61,9 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            // The window is never destroyed: X hides it to the tray, and the
-            // bots keep running until 結束 in the tray menu.
+            // Windows are never destroyed: X hides the main one to the tray (bots
+            // keep running until 結束 in the tray menu) and the settings one is
+            // reused the next time it is opened.
             if let WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
                 let _ = window.hide();
@@ -82,6 +83,7 @@ pub fn run() {
             commands::get_host_autostart,
             commands::set_host_autostart,
             commands::open_logs_dir,
+            commands::open_settings,
             commands::config_path,
         ])
         .build(tauri::generate_context!())

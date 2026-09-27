@@ -21,6 +21,8 @@ export const useBotsStore = defineStore("bots", () => {
   const page = ref<Page>({ kind: "home" });
 
   const selected = computed(() => bots.value.find((b) => b.id === selectedId.value) ?? null);
+  /** The right-hand pane is open: a bot is selected or the add/edit form is showing. */
+  const expanded = computed(() => page.value.kind === "edit" || selected.value !== null);
 
   let pending: LogEvent[] = [];
   let flushScheduled = false;
@@ -58,7 +60,6 @@ export const useBotsStore = defineStore("bots", () => {
     bots.value = await invoke<BotSpec[]>("list_bots");
     const list = await invoke<StateEvent[]>("list_status");
     statuses.value = Object.fromEntries(list.map((s) => [s.id, s]));
-    if (!selected.value) await select(bots.value[0]?.id ?? null);
   }
 
   // Subscribe first, then snapshot: nothing emitted in between is lost.
@@ -70,6 +71,12 @@ export const useBotsStore = defineStore("bots", () => {
     await run(async () => {
       await refresh();
       startupNotice.value = await invoke<string | null>("startup_notice");
+    });
+  }
+
+  /** Settings window only: it shows no bots or logs, so it does not subscribe to them. */
+  async function loadSettings() {
+    await run(async () => {
       configPath.value = await invoke<string>("config_path");
       hostAutostart.value = await invoke<boolean>("get_host_autostart");
     });
@@ -118,6 +125,7 @@ export const useBotsStore = defineStore("bots", () => {
   }
 
   const openLogsDir = () => run(() => invoke("open_logs_dir"));
+  const openSettings = () => run(() => invoke("open_settings"));
 
   function edit(title: string, draft: BotSpec) {
     page.value = { kind: "edit", title, draft };
@@ -132,12 +140,14 @@ export const useBotsStore = defineStore("bots", () => {
     logs,
     selectedId,
     selected,
+    expanded,
     startupNotice,
     error,
     hostAutostart,
     configPath,
     page,
     init,
+    loadSettings,
     select,
     start,
     stop,
@@ -148,6 +158,7 @@ export const useBotsStore = defineStore("bots", () => {
     setAutostart,
     setHostAutostart,
     openLogsDir,
+    openSettings,
     edit,
     home,
   };

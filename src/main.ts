@@ -1,6 +1,8 @@
 import { createApp } from "vue";
 import { createPinia } from "pinia";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import App from "./App.vue";
+import SettingsWindow from "./SettingsWindow.vue";
 import "./styles.css";
 import { lockScale } from "./scale";
 
@@ -37,5 +39,7 @@ document.addEventListener(
   true,
 );
 
-createApp(App).use(createPinia()).mount("#app");
+// One bundle, two windows (tauri.conf.json): each shows the view named by its label.
+const root = getCurrentWindow().label === "settings" ? SettingsWindow : App;
+createApp(root).use(createPinia()).mount("#app");
 void lockScale();

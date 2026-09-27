@@ -60,7 +60,7 @@ async function save() {
 </script>
 
 <template>
-  <div class="page">
+  <section class="card page">
     <div class="bar">
       <button class="plain back" data-tip="不儲存，回到清單" @click="store.home()">
         <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
@@ -76,7 +76,7 @@ async function save() {
     <div class="body">
       <p v-if="missingSecrets.length" class="warn">還要填：{{ missingSecrets.join("、") }}</p>
 
-      <section class="card">
+      <section class="group">
         <div class="field">
           <label>名稱</label>
           <input v-model="form.name" type="text" placeholder="顯示在清單上的名字" />
@@ -97,7 +97,7 @@ async function save() {
         </div>
       </section>
 
-      <section class="card">
+      <section class="group">
         <div class="card-head">
           <span>環境變數</span>
           <span class="head-sub">token 之類的設定放這裡</span>
@@ -127,7 +127,7 @@ async function save() {
         </div>
       </section>
 
-      <section class="card">
+      <section class="group">
         <button class="fold" :aria-expanded="advanced" @click="advanced = !advanced">
           <span>進階</span>
           <span class="head-sub">啟動參數、工作目錄</span>
@@ -151,18 +151,18 @@ async function save() {
         </template>
       </section>
     </div>
-  </div>
+  </section>
 </template>
 
 <style scoped>
 .page {
   flex: 1;
-  min-height: 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
 }
 .bar {
-  height: 52px;
+  height: 56px;
   flex: none;
   display: flex;
   align-items: center;
@@ -182,18 +182,17 @@ async function save() {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: var(--sp-4);
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-3);
 }
 .warn {
+  padding: var(--sp-3) var(--sp-4);
   font-size: 15px;
   font-weight: 600;
   color: var(--warn);
+  border-bottom: 0.5px solid var(--border);
 }
-.card {
-  flex: none;
+/* Groups inside the card are separated by a line, not nested cards. */
+.group {
+  border-bottom: 0.5px solid var(--border);
 }
 
 .field {

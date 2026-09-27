@@ -98,7 +98,7 @@ body,
   overflow: hidden;
 }
 
-/* The window is transparent; .app paints the background inside the rounded corners. */
+/* The window is transparent; .winframe paints the background inside the rounded corners. */
 body {
   background: transparent;
   color: var(--text);
@@ -132,6 +132,29 @@ textarea {
 
 .mono {
   font-family: var(--font-mono);
+}
+
+/* Window frame: Windows 10 has no DWM rounding for an undecorated transparent
+   window, so the rounded background is drawn here. Every window's root uses it. */
+.winframe {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-0);
+  border-radius: var(--radius-window);
+  overflow: hidden;
+}
+/* The outline sits on top of everything, otherwise the title bar's own background hides it. */
+.winframe::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  border: 1px solid var(--window-edge);
+  border-radius: inherit;
+  box-shadow: inset 0 1px 0 var(--window-highlight);
 }
 
 /* ── §3 Controls ─────────────────────────────────────────────────────────── */

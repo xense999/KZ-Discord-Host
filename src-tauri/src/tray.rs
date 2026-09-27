@@ -5,11 +5,21 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{AppHandle, Manager};
 
 pub const MAIN_WINDOW: &str = "main";
+/// Declared in tauri.conf.json, created hidden at startup and reused on every open.
+pub const SETTINGS_WINDOW: &str = "settings";
 const MENU_SHOW: &str = "show";
 const MENU_QUIT: &str = "quit";
 
 pub fn show_main(app: &AppHandle) {
-    let Some(w) = app.get_webview_window(MAIN_WINDOW) else { return };
+    show(app, MAIN_WINDOW);
+}
+
+pub fn show_settings(app: &AppHandle) {
+    show(app, SETTINGS_WINDOW);
+}
+
+fn show(app: &AppHandle, label: &str) {
+    let Some(w) = app.get_webview_window(label) else { return };
     let _ = w.show();
     let _ = w.unminimize();
     let _ = w.set_focus();

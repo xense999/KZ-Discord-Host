@@ -2,8 +2,9 @@
 import { onMounted, onUnmounted } from "vue";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
-defineProps<{ title: string; settingsOpen: boolean }>();
-const emit = defineEmits<{ toggleSettings: [] }>();
+/** `child`: the settings window, which has no gear and no minimise button. */
+defineProps<{ title: string; child?: boolean }>();
+const emit = defineEmits<{ openSettings: [] }>();
 
 const appWin = getCurrentWindow();
 
@@ -35,11 +36,6 @@ function onUp() {
   origin = null;
 }
 
-function onDblClick(e: MouseEvent) {
-  if ((e.target as HTMLElement | null)?.closest("button")) return;
-  void appWin.toggleMaximize();
-}
-
 onMounted(() => {
   window.addEventListener("mousemove", onMove);
   window.addEventListener("mouseup", onUp);
@@ -51,8 +47,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="titlebar" @mousedown="onDown" @dblclick="onDblClick">
-    <button class="gear" :class="{ on: settingsOpen }" :data-tip="settingsOpen ? '回到清單' : '設定'" @click="emit('toggleSettings')">
+  <div class="titlebar" :class="{ child }" @mousedown="onDown">
+    <button v-if="!child" class="gear" data-tip="設定" @click="emit('openSettings')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z" />
         <circle cx="12" cy="12" r="3" />
@@ -63,15 +59,10 @@ onUnmounted(() => {
     <div class="spacer"></div>
 
     <div class="win-controls">
-      <button class="wbtn" data-tip="最小化" @click="appWin.minimize()">
+      <button v-if="!child" class="wbtn" data-tip="最小化" @click="appWin.minimize()">
         <svg class="wico" viewBox="0 0 10 10"><rect x="1.5" y="4.7" width="7" height="0.8" rx="0.4" /></svg>
       </button>
-      <button class="wbtn" data-tip="最大化" @click="appWin.toggleMaximize()">
-        <svg class="wico" viewBox="0 0 10 10">
-          <rect x="1.8" y="1.8" width="6.4" height="6.4" rx="1.4" fill="none" stroke="currentColor" stroke-width="0.9" />
-        </svg>
-      </button>
-      <button class="wbtn close" data-tip="收進系統匣（bot 繼續跑）" @click="appWin.close()">
+      <button class="wbtn close" :data-tip="child ? '關閉' : '收進系統匣（bot 繼續跑）'" @click="appWin.close()">
         <svg class="wico" viewBox="0 0 10 10">
           <path d="M2.4 2.4 7.6 7.6M7.6 2.4 2.4 7.6" stroke="currentColor" stroke-width="1" stroke-linecap="round" />
         </svg>
@@ -92,6 +83,9 @@ onUnmounted(() => {
   padding: 0 8px;
   background: var(--toolbar);
   border-bottom: 0.5px solid var(--border);
+}
+.titlebar.child {
+  padding-left: var(--sp-4);
 }
 .brand {
   font-size: 16px;

@@ -72,11 +72,15 @@ onUnmounted(() => {
   padding: 7px 13px;
   font-size: 13px;
   font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
+  line-height: 1.45;
+  /* Short tips stay on one line; long explanations wrap inside the window. */
+  width: max-content;
+  max-width: min(340px, calc(100vw - 16px));
+  white-space: normal;
+  text-align: center;
   color: var(--text-on-accent);
   background: var(--accent);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius);
   pointer-events: none;
 }
 </style>

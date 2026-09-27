@@ -1,42 +1,37 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { onMounted, watch } from "vue";
+import { LogicalSize, getCurrentWindow } from "@tauri-apps/api/window";
 import AppTitlebar from "./components/AppTitlebar.vue";
 import AppTooltip from "./components/AppTooltip.vue";
 import ToastPop from "./components/ToastPop.vue";
 import HomePage from "./views/HomePage.vue";
-import EditPage from "./views/EditPage.vue";
-import SettingsPage from "./views/SettingsPage.vue";
 import { useBotsStore } from "./stores/bots";
 
 const store = useBotsStore();
 
-// Maximized: square corners and no outline, or the desktop shows through the screen corners.
-const maximized = ref(false);
-const win = getCurrentWindow();
-async function syncMaximized() {
-  maximized.value = await win.isMaximized();
-}
+onMounted(() => store.init());
 
-onMounted(async () => {
-  void store.init();
-  await syncMaximized();
-  await win.onResized(syncMaximized);
-});
+// Fixed-size window, as in the original design: the list alone is narrow;
+// selecting a bot (or opening the add/edit form) grows it to the right.
+// Collapsed width matches 久世登入器 (420).
+const COLLAPSED_WIDTH = 420;
+const EXPANDED_WIDTH = 960;
+const HEIGHT = 640;
+watch(
+  () => store.expanded,
+  (expanded) => {
+    void getCurrentWindow().setSize(new LogicalSize(expanded ? EXPANDED_WIDTH : COLLAPSED_WIDTH, HEIGHT));
+  },
+);
 
-// Settings is a separate screen, not an overlay: the gear swaps the whole content area.
-const showSettings = ref(false);
-const view = computed(() => {
-  if (showSettings.value) return "settings";
-  return store.page.kind;
-});
+
 </script>
 
 <template>
-  <div class="app" :class="{ maxed: maximized }">
+  <div class="winframe">
     <AppTooltip />
     <ToastPop />
-    <AppTitlebar title="久世 Discord Host" :settings-open="showSettings" @toggle-settings="showSettings = !showSettings" />
+    <AppTitlebar title="久世 Discord Host" @open-settings="store.openSettings()" />
 
     <div v-if="store.startupNotice" class="notice">
       <span>設定檔讀取失敗，這次以空白設定啟動。{{ store.startupNotice }}</span>
@@ -44,42 +39,12 @@ const view = computed(() => {
     </div>
 
     <main class="content">
-      <SettingsPage v-if="view === 'settings'" />
-      <EditPage v-else-if="store.page.kind === 'edit'" :key="store.page.draft.id || store.page.title" :page="store.page" />
-      <HomePage v-else />
+      <HomePage />
     </main>
   </div>
 </template>
 
 <style scoped>
-/* Rounded window drawn here: Windows 10 has no DWM rounding for an undecorated transparent window. */
-.app {
-  position: relative;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg-0);
-  border-radius: var(--radius-window);
-  overflow: hidden;
-}
-.app.maxed {
-  border-radius: 0;
-}
-.app.maxed::after {
-  display: none;
-}
-/* The outline sits on top of everything, otherwise the title bar's own background hides it. */
-.app::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 100;
-  pointer-events: none;
-  border: 1px solid var(--window-edge);
-  border-radius: inherit;
-  box-shadow: inset 0 1px 0 var(--window-highlight);
-}
-
 .notice {
   flex: none;
   display: flex;

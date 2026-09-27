@@ -85,6 +85,11 @@ pub fn open_logs_dir(app: AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn open_settings(app: AppHandle) {
+    crate::tray::show_settings(&app);
+}
+
+#[tauri::command]
 pub fn config_path() -> String {
     config::config_path().to_string_lossy().to_string()
 }
