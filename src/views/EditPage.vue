@@ -133,16 +133,22 @@ async function save() {
   color: var(--text-strong);
 }
 /* Breathing room between the bar and the first card. */
+/* Tighter than the settings window: this form sits inside a card already. */
 .page .set-scroll {
-  padding: 16px;
+  padding: 12px;
+  gap: 10px;
+}
+.page .set-row {
+  min-height: 46px;
+  padding: 6px 12px;
+}
+.page .path-row {
+  padding: 6px 12px;
 }
 .warn {
   font-size: 14px;
   font-weight: 600;
   color: var(--warn);
-}
-.env {
-  padding-top: 10px;
 }
 .env-name {
   flex: 0 0 120px;
