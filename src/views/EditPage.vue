@@ -45,7 +45,7 @@ async function save() {
 </script>
 
 <template>
-  <div class="page">
+  <section class="card page">
     <div class="bar">
       <button class="btn-browse" data-tip="不儲存，回到清單" @click="store.home()">返回</button>
       <span class="bar-title">{{ page.title }}</span>
@@ -103,7 +103,7 @@ async function save() {
         </template>
       </div>
     </div>
-  </div>
+  </section>
 </template>
 
 <style scoped>
@@ -114,11 +114,17 @@ async function save() {
   flex-direction: column;
 }
 .bar {
-  height: 48px;
+  height: 56px;
   flex: none;
   display: flex;
   align-items: center;
   gap: var(--sp-3);
+  padding: 0 var(--sp-4);
+  border-bottom: 0.5px solid var(--border);
+}
+/* The inner cards sit one step darker so they still read as cards inside the outer one. */
+.page .set-card {
+  background: var(--bg-2);
 }
 .bar-title {
   font-size: 15px;
@@ -127,7 +133,7 @@ async function save() {
 }
 /* Breathing room between the bar and the first card. */
 .page .set-scroll {
-  padding: 12px 0;
+  padding: 16px;
 }
 .warn {
   font-size: 14px;
