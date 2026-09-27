@@ -62,7 +62,7 @@ onUnmounted(() => {
       <button v-if="!child" class="wbtn" data-tip="最小化" @click="appWin.minimize()">
         <svg class="wico" viewBox="0 0 10 10"><rect x="1.5" y="4.7" width="7" height="0.8" rx="0.4" /></svg>
       </button>
-      <button class="wbtn close" :data-tip="child ? '關閉' : '收進系統匣（bot 繼續跑）'" @click="appWin.close()">
+      <button class="wbtn close" :data-tip="child ? '關閉' : '收進系統匣（bot 繼續跑）'" @click="appWin.hide()">
         <svg class="wico" viewBox="0 0 10 10">
           <path d="M2.4 2.4 7.6 7.6M7.6 2.4 2.4 7.6" stroke="currentColor" stroke-width="1" stroke-linecap="round" />
         </svg>
