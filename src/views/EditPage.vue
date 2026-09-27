@@ -10,21 +10,13 @@ const store = useBotsStore();
 
 const draft = props.page.draft;
 const form = reactive<BotSpec>({ ...draft, env: draft.env.map((e) => ({ ...e })) });
-const argsText = ref(draft.args.join("\n"));
 const revealed = ref<boolean[]>(draft.env.map(() => false));
-// Arguments and working directory are rarely needed; keep them folded unless already set.
-const advanced = ref(draft.args.length > 0 || !!draft.cwd);
 
 const missingSecrets = computed(() => form.env.filter((e) => e.name.trim() && !e.value).map((e) => e.name.trim()));
 
 async function pickExe() {
-  const file = await open({ multiple: false, filters: [{ name: "執行檔", extensions: ["exe", "bat", "cmd"] }], title: "選擇 bot 執行檔" });
+  const file = await open({ multiple: false, filters: [{ name: "執行檔", extensions: ["exe"] }], title: "選擇 bot 執行檔" });
   if (typeof file === "string") form.exe = file;
-}
-
-async function pickCwd() {
-  const dir = await open({ directory: true, multiple: false, title: "選擇工作目錄" });
-  if (typeof dir === "string") form.cwd = dir;
 }
 
 function addEnv() {
@@ -42,17 +34,9 @@ async function save() {
   if (!form.exe.trim()) return void (store.error = "執行檔不可為空");
   // Every value is treated as secret (masked in the UI); there is no per-row switch.
   const env: EnvVar[] = form.env.filter((e) => e.name.trim()).map((e) => ({ ...e, name: e.name.trim(), secret: true }));
-  const spec: BotSpec = {
-    ...form,
-    name: form.name.trim(),
-    exe: form.exe.trim(),
-    cwd: form.cwd?.trim() ? form.cwd.trim() : undefined,
-    args: argsText.value
-      .split("\n")
-      .map((s) => s.trim())
-      .filter(Boolean),
-    env,
-  };
+  // Arguments and working directory are not editable here (exe bots only);
+  // values that came from bot.toml ride along unchanged in `form`.
+  const spec: BotSpec = { ...form, name: form.name.trim(), exe: form.exe.trim(), env };
   const saved = await store.upsert(spec);
   if (!saved) return;
   await store.select(saved.id);
@@ -115,28 +99,6 @@ async function save() {
             />
             <button class="btn-browse" @click="revealed[i] = !revealed[i]">{{ revealed[i] ? "隱藏" : "顯示" }}</button>
             <button class="btn-browse danger" data-tip="刪除這一列" @click="removeEnv(i)">刪除</button>
-          </div>
-        </template>
-      </div>
-
-      <div class="set-card" :class="{ unfolded: advanced }">
-        <div class="set-row foldhead" @click="advanced = !advanced">
-          <span class="set-title" data-tip="啟動參數、工作目錄；大部分 bot 不需要">進階</span>
-          <svg class="foldchev" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
-            <path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </div>
-        <template v-if="advanced">
-          <div class="set-sep"></div>
-          <div class="set-row">
-            <span class="set-title fixed" data-tip="一行一個">啟動參數</span>
-            <textarea v-model="argsText" rows="2" class="path-input" spellcheck="false"></textarea>
-          </div>
-          <div class="set-sep"></div>
-          <div class="set-row">
-            <span class="set-title fixed">工作目錄</span>
-            <input v-model="form.cwd" type="text" class="path-input" placeholder="留空＝執行檔所在的資料夾" spellcheck="false" />
-            <button class="btn-browse" @click="pickCwd">瀏覽</button>
           </div>
         </template>
       </div>
