@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { useBotsStore } from "../stores/bots";
-import { setTheme, theme } from "../theme";
 
 const store = useBotsStore();
 </script>
@@ -15,14 +14,6 @@ const store = useBotsStore();
         <div class="hint">登入 Windows 後靜默起在系統匣；有開「開啟程式時自動啟動」的 bot 會自動拉起。</div>
       </div>
       <button class="switch" :class="{ on: store.hostAutostart }" @click="store.setHostAutostart(!store.hostAutostart)"></button>
-    </div>
-
-    <div class="item">
-      <div class="text">
-        <div class="name">暗色主題</div>
-        <div class="hint">關掉就是淺色版。</div>
-      </div>
-      <button class="switch" :class="{ on: theme === 'dark' }" @click="setTheme(theme === 'dark' ? 'light' : 'dark')"></button>
     </div>
 
     <div class="item">

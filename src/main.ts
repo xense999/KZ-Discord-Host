@@ -2,10 +2,7 @@ import { createApp } from "vue";
 import { createPinia } from "pinia";
 import App from "./App.vue";
 import "./styles.css";
-import { applyTheme } from "./theme";
 import { lockScale } from "./scale";
-
-applyTheme();
 
 // No browser context menu in a desktop app, except in text fields (right-click paste).
 document.addEventListener("contextmenu", (e) => {
