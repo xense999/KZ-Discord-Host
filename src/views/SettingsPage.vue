@@ -6,70 +6,90 @@ const store = useBotsStore();
 </script>
 
 <template>
-  <div class="body">
-    <section class="card">
-      <div class="row">
-        <span class="row-title">主題</span>
-        <div class="seg">
-          <button :class="{ on: theme === 'light' }" @click="setTheme('light')">淺色</button>
-          <button :class="{ on: theme === 'dark' }" @click="setTheme('dark')">深色</button>
-        </div>
-      </div>
-      <div class="row">
-        <span class="row-title">
-          開機自動啟動
-          <span class="row-sub">登入 Windows 後直接收在系統匣，有開「自動啟動」的 bot 會一起拉起來</span>
-        </span>
-        <button
-          class="switch"
-          role="switch"
-          :class="{ on: store.hostAutostart }"
-          :aria-checked="store.hostAutostart"
-          @click="store.setHostAutostart(!store.hostAutostart)"
-        ></button>
-      </div>
-      <div class="row">
-        <span class="row-title">
-          關閉視窗
-          <span class="row-sub">按 X 只是收進系統匣，bot 會繼續跑；對系統匣圖示按右鍵 →「結束」才會全部停止</span>
-        </span>
-      </div>
-    </section>
+  <div class="settings">
+    <h2>設定</h2>
 
-    <section class="card">
-      <div class="row">
-        <span class="row-title">
-          紀錄資料夾
-          <span class="row-sub">每隻 bot 一個檔，超過 5 MB 自動換新檔、保留三份</span>
-        </span>
-        <button @click="store.openLogsDir">開啟</button>
+    <div class="item">
+      <div class="text">
+        <div class="name">開機自動啟動</div>
+        <div class="hint">登入 Windows 後靜默起在系統匣；有開「開啟程式時自動啟動」的 bot 會自動拉起。</div>
       </div>
-      <div class="row">
-        <span class="row-title">
-          設定檔
-          <span class="row-sub mono path" :data-tip="store.configPath">{{ store.configPath }}</span>
-        </span>
+      <button class="switch" :class="{ on: store.hostAutostart }" @click="store.setHostAutostart(!store.hostAutostart)"></button>
+    </div>
+
+    <div class="item">
+      <div class="text">
+        <div class="name">暗色主題</div>
+        <div class="hint">關掉就是淺色版。</div>
       </div>
-    </section>
+      <button class="switch" :class="{ on: theme === 'dark' }" @click="setTheme(theme === 'dark' ? 'light' : 'dark')"></button>
+    </div>
+
+    <div class="item">
+      <div class="text">
+        <div class="name">Log 資料夾</div>
+        <div class="hint">每隻 bot 一個 .log，超過 5 MB 自動輪替、保留三份。</div>
+      </div>
+      <button @click="store.openLogsDir">開啟</button>
+    </div>
+
+    <div class="item">
+      <div class="text">
+        <div class="name">設定檔</div>
+        <div class="hint mono">{{ store.configPath }}</div>
+      </div>
+    </div>
+
+    <div class="item">
+      <div class="text">
+        <div class="name">關閉視窗</div>
+        <div class="hint">按 X 只是藏到系統匣；要真的結束請在系統匣圖示按右鍵 → 結束（所有 bot 一起停止）。</div>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.body {
+.settings {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: var(--sp-4);
+  padding: 20px 24px;
+}
+
+h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.item {
+  max-width: 640px;
   display: flex;
-  flex-direction: column;
-  gap: var(--sp-3);
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
 }
-.card {
-  flex: none;
+
+.text {
+  min-width: 0;
 }
-.path {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+
+.name {
+  font-weight: 500;
+  color: var(--text-strong);
+}
+
+.hint {
+  font-size: 14px;
+  color: var(--text-faint);
+}
+
+.mono {
+  user-select: text;
+  word-break: break-all;
 }
 </style>
