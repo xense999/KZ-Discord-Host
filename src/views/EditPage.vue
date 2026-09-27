@@ -75,19 +75,22 @@ async function save() {
         <div class="set-row">
           <span class="set-title fixed">名稱</span>
           <input v-model="form.name" type="text" class="path-input" placeholder="顯示在清單上的名字" spellcheck="false" />
+          <button
+            class="pill-switch"
+            role="switch"
+            :class="{ on: form.autostart }"
+            :aria-checked="form.autostart"
+            :data-tip="form.autostart ? '開啟程式時自動啟動：開' : '開啟程式時自動啟動：關'"
+            @click="form.autostart = !form.autostart"
+          >
+            <span class="pill-knob"></span>
+          </button>
         </div>
         <div class="set-sep"></div>
         <div class="set-row">
           <span class="set-title fixed">執行檔</span>
           <input v-model="form.exe" type="text" class="path-input" placeholder="C:\bots\my-bot\bot.exe" spellcheck="false" />
           <button class="btn-browse" @click="pickExe">瀏覽</button>
-        </div>
-        <div class="set-sep"></div>
-        <div class="set-row">
-          <span class="set-title" data-tip="久世 Discord Host 一開就把這隻 bot 拉起來">開啟程式時自動啟動</span>
-          <button class="pill-switch" role="switch" :class="{ on: form.autostart }" :aria-checked="form.autostart" @click="form.autostart = !form.autostart">
-            <span class="pill-knob"></span>
-          </button>
         </div>
       </div>
 
@@ -159,8 +162,9 @@ async function save() {
   font-weight: 600;
   color: var(--text-strong);
 }
+/* Breathing room between the bar and the first card. */
 .page .set-scroll {
-  padding: 0 0 12px;
+  padding: 12px 0;
 }
 .warn {
   font-size: 14px;
