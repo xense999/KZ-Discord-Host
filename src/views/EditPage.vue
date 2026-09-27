@@ -113,8 +113,9 @@ async function save() {
   display: flex;
   flex-direction: column;
 }
+/* Same height as the list card's heading on the left (.card-head, 48px). */
 .bar {
-  height: 56px;
+  height: 48px;
   flex: none;
   display: flex;
   align-items: center;
