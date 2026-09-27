@@ -147,8 +147,10 @@ async function save() {
 }
 /* Breathing room between the bar and the first card. */
 /* Tighter than the settings window: this form sits inside a card already. */
+/* Side inset a little under the 12px gap between the two big cards: the outer
+   border and the rows' own padding already add to it visually. */
 .page .set-scroll {
-  padding: 12px;
+  padding: 12px 8px;
   gap: 10px;
 }
 .page .set-row {
