@@ -75,6 +75,7 @@ async function save() {
         <div class="set-row">
           <span class="set-title fixed">名稱</span>
           <input v-model="form.name" type="text" class="path-input" placeholder="顯示在清單上的名字" spellcheck="false" />
+          <span class="set-title">自啟</span>
           <button
             class="pill-switch"
             role="switch"
