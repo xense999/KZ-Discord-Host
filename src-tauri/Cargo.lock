@@ -1956,9 +1956,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "kz-bot-host"
+name = "kz-discord-host"
 version = "0.1.0"
 dependencies = [
+ "auto-launch",
  "chrono",
  "serde",
  "serde_json",

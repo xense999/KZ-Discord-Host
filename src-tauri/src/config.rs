@@ -1,11 +1,13 @@
-//! Persistent configuration: `%APPDATA%\KZ Bot Host\config.json` (plain text).
+//! Persistent configuration: `%APPDATA%\KZ Discord Host\config.json` (plain text).
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-pub const APP_DIR_NAME: &str = "KZ Bot Host";
+pub const APP_DIR_NAME: &str = "KZ Discord Host";
+/// Data folder of the app before it joined the 久世 family (was "KZ Bot Host").
+pub const LEGACY_APP_DIR_NAME: &str = "KZ Bot Host";
 pub const CONFIG_FILE_NAME: &str = "config.json";
 pub const SCHEMA_VERSION: u32 = 1;
 
@@ -96,11 +98,33 @@ impl Default for Config {
     }
 }
 
+fn appdata() -> PathBuf {
+    std::env::var_os("APPDATA").map(PathBuf::from).unwrap_or_else(std::env::temp_dir)
+}
+
 pub fn app_dir() -> PathBuf {
-    let base = std::env::var_os("APPDATA")
-        .map(PathBuf::from)
-        .unwrap_or_else(std::env::temp_dir);
-    base.join(APP_DIR_NAME)
+    appdata().join(APP_DIR_NAME)
+}
+
+/// Carry the old "KZ Bot Host" data over (bots, tokens, logs) the first time
+/// the renamed app starts. Run before anything touches `app_dir()`.
+pub fn migrate_legacy_dir() {
+    migrate_dir(&appdata().join(LEGACY_APP_DIR_NAME), &app_dir());
+}
+
+/// Move `old` to `new` when only `old` exists. If the old app still holds its
+/// log files open the move fails; then at least the config is copied.
+fn migrate_dir(old: &Path, new: &Path) {
+    if new.exists() || !old.is_dir() {
+        return;
+    }
+    if fs::rename(old, new).is_ok() {
+        return;
+    }
+    let old_config = old.join(CONFIG_FILE_NAME);
+    if old_config.is_file() && fs::create_dir_all(new).is_ok() {
+        let _ = fs::copy(old_config, new.join(CONFIG_FILE_NAME));
+    }
 }
 
 pub fn config_path() -> PathBuf {
@@ -236,6 +260,22 @@ mod tests {
         let path = dir.path().join("config.json");
         save(&path, &sample()).unwrap();
         assert_eq!(load_or_back_up(&path), (sample(), None));
+    }
+
+    #[test]
+    fn legacy_dir_moves_over_once() {
+        let root = tempfile::tempdir().unwrap();
+        let old = root.path().join("old");
+        let new = root.path().join("new");
+        save(&old.join(CONFIG_FILE_NAME), &sample()).unwrap();
+        migrate_dir(&old, &new);
+        assert!(!old.exists());
+        assert_eq!(load(&new.join(CONFIG_FILE_NAME)).unwrap(), sample());
+
+        // An existing new folder is never overwritten by a leftover old one.
+        save(&old.join(CONFIG_FILE_NAME), &Config::default()).unwrap();
+        migrate_dir(&old, &new);
+        assert_eq!(load(&new.join(CONFIG_FILE_NAME)).unwrap(), sample());
     }
 
     #[test]

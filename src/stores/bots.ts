@@ -1,12 +1,13 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
-import { emit, listen } from "@tauri-apps/api/event";
+import { listen } from "@tauri-apps/api/event";
 import type { BotSpec, LogEvent, LogLine, StateEvent } from "../types";
 
 export const LOG_RING = 500;
-/** Global event: the bot list changed in some window. */
-export const EVENT_BOTS_CHANGED = "bots-changed";
+
+/** What the content area shows besides the bot list (settings is toggled by the gear). */
+export type Page = { kind: "home" } | { kind: "edit"; title: string; draft: BotSpec };
 
 export const useBotsStore = defineStore("bots", () => {
   const bots = ref<BotSpec[]>([]);
@@ -17,6 +18,7 @@ export const useBotsStore = defineStore("bots", () => {
   const error = ref<string | null>(null);
   const hostAutostart = ref(false);
   const configPath = ref("");
+  const page = ref<Page>({ kind: "home" });
 
   const selected = computed(() => bots.value.find((b) => b.id === selectedId.value) ?? null);
 
@@ -56,29 +58,18 @@ export const useBotsStore = defineStore("bots", () => {
     bots.value = await invoke<BotSpec[]>("list_bots");
     const list = await invoke<StateEvent[]>("list_status");
     statuses.value = Object.fromEntries(list.map((s) => [s.id, s]));
+    if (!selected.value) await select(bots.value[0]?.id ?? null);
   }
 
   // Subscribe first, then snapshot: nothing emitted in between is lost.
-  let listening = false;
   async function init() {
-    if (!listening) {
-      listening = true;
-      await listen<StateEvent>("bot-state", (e) => {
-        statuses.value[e.payload.id] = e.payload;
-      });
-      await listen<LogEvent>("bot-log", (e) => queueLog(e.payload));
-      // Child windows (form/settings) edit the bot list; every window refreshes.
-      await listen(EVENT_BOTS_CHANGED, () => refresh());
-    }
+    await listen<StateEvent>("bot-state", (e) => {
+      statuses.value[e.payload.id] = e.payload;
+    });
+    await listen<LogEvent>("bot-log", (e) => queueLog(e.payload));
     await run(async () => {
       await refresh();
       startupNotice.value = await invoke<string | null>("startup_notice");
-    });
-  }
-
-  /** Settings window only: it shows no bots or logs, so it does not subscribe to them. */
-  async function loadSettings() {
-    await run(async () => {
       configPath.value = await invoke<string>("config_path");
       hostAutostart.value = await invoke<boolean>("get_host_autostart");
     });
@@ -103,7 +94,7 @@ export const useBotsStore = defineStore("bots", () => {
 
   async function upsert(spec: BotSpec): Promise<BotSpec | undefined> {
     const saved = await run(() => invoke<BotSpec>("upsert_bot", { spec }));
-    if (saved) await emit(EVENT_BOTS_CHANGED);
+    if (saved) await run(refresh);
     return saved;
   }
 
@@ -112,7 +103,7 @@ export const useBotsStore = defineStore("bots", () => {
     delete logs.value[id];
     tailLoaded.delete(id);
     if (selectedId.value === id) selectedId.value = null;
-    await emit(EVENT_BOTS_CHANGED);
+    await run(refresh);
   }
 
   const importFolder = (dir: string) => run(() => invoke<BotSpec>("import_bot_folder", { dir }));
@@ -128,15 +119,11 @@ export const useBotsStore = defineStore("bots", () => {
 
   const openLogsDir = () => run(() => invoke("open_logs_dir"));
 
-  /** Query parked for this window by open_window (child windows call once on mount). */
-  const takeRoute = () => run(() => invoke<string | null>("take_route"));
-
-  /** Open (or focus) a child window: view = "form" | "settings". */
-  const openWindow = (view: "form" | "settings", query?: string) =>
-    run(() => invoke("open_window", { view, query: query ?? null }));
-
-  function clearLogView(id: string) {
-    logs.value[id] = [];
+  function edit(title: string, draft: BotSpec) {
+    page.value = { kind: "edit", title, draft };
+  }
+  function home() {
+    page.value = { kind: "home" };
   }
 
   return {
@@ -149,9 +136,8 @@ export const useBotsStore = defineStore("bots", () => {
     error,
     hostAutostart,
     configPath,
+    page,
     init,
-    loadSettings,
-    refresh,
     select,
     start,
     stop,
@@ -162,8 +148,7 @@ export const useBotsStore = defineStore("bots", () => {
     setAutostart,
     setHostAutostart,
     openLogsDir,
-    openWindow,
-    takeRoute,
-    clearLogView,
+    edit,
+    home,
   };
 });

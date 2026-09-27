@@ -1,34 +1,32 @@
-import { emit, listen } from "@tauri-apps/api/event";
+import { ref } from "vue";
 
-export type Theme = "dark" | "light";
-const EVENT_THEME = "theme-changed";
+/** Light / dark. CSS only reads <html data-theme>. First run is light, like the other 久世 apps. */
+export type Theme = "light" | "dark";
 
-const STORAGE_KEY = "kz-bot-host.theme";
-const DEFAULT_THEME: Theme = "dark";
+const STORAGE_KEY = "kz-discord-host:theme";
 
-export function currentTheme(): Theme {
+function initial(): Theme {
   try {
-    return localStorage.getItem(STORAGE_KEY) === "light" ? "light" : DEFAULT_THEME;
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved === "light" || saved === "dark") return saved;
   } catch {
-    return DEFAULT_THEME;
+    // storage unavailable: fall back to the default
   }
+  return "light";
 }
 
-export function applyTheme(theme: Theme) {
-  document.documentElement.setAttribute("data-theme", theme);
+export const theme = ref<Theme>(initial());
+
+export function applyTheme() {
+  document.documentElement.dataset.theme = theme.value;
+}
+
+export function setTheme(t: Theme) {
+  theme.value = t;
   try {
-    localStorage.setItem(STORAGE_KEY, theme);
+    localStorage.setItem(STORAGE_KEY, t);
   } catch {
-    // storage unavailable: theme still applies for this session
+    // storage unavailable: the choice lasts for this run only
   }
-}
-
-/** Apply here and tell every other window. */
-export function setTheme(theme: Theme) {
-  applyTheme(theme);
-  void emit(EVENT_THEME, theme);
-}
-
-export function followThemeChanges() {
-  void listen<Theme>(EVENT_THEME, (e) => applyTheme(e.payload));
+  applyTheme();
 }

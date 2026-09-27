@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    kz_bot_host_lib::run()
+    kz_discord_host_lib::run()
 }

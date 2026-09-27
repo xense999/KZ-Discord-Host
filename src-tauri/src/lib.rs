@@ -11,7 +11,6 @@ pub mod tray;
 use std::sync::Arc;
 
 use tauri::{AppHandle, Emitter, Manager, RunEvent, WindowEvent};
-use tauri_plugin_autostart::MacosLauncher;
 
 use app_state::AppState;
 use supervisor::{EventSink, LogEvent, StateEvent, Supervisor};
@@ -34,25 +33,27 @@ impl EventSink for TauriSink {
 pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| tray::show_main(app)))
-        .plugin(tauri_plugin_autostart::init(
-            MacosLauncher::LaunchAgent,
-            Some(vec![autostart::MINIMIZED_FLAG]),
-        ))
+        .plugin(
+            tauri_plugin_autostart::Builder::new()
+                .args([autostart::MINIMIZED_FLAG])
+                .app_name(autostart::RUN_KEY_NAME)
+                .build(),
+        )
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
+            config::migrate_legacy_dir();
+            // A dev build must not take over the installed app's logon entry.
+            if !cfg!(debug_assertions) {
+                autostart::migrate_legacy(app.handle());
+            }
             let (cfg, notice) = config::load_or_back_up(&config::config_path());
             let sink = Arc::new(TauriSink(app.handle().clone()));
             let supervisor = Supervisor::new(sink, config::logs_dir(), &cfg.bots);
             for bot in cfg.bots.iter().filter(|b| b.autostart) {
                 let _ = supervisor.start(&bot.id);
             }
-            app.manage(AppState {
-                supervisor,
-                startup_notice: notice,
-                routes: Default::default(),
-                persist_lock: Default::default(),
-            });
+            app.manage(AppState { supervisor, startup_notice: notice, persist_lock: Default::default() });
             tray::setup(app.handle())?;
             if !autostart::launched_minimized() {
                 tray::show_main(app.handle());
@@ -60,8 +61,8 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            // Windows are never destroyed: the main one hides to the tray, the
-            // child ones are reused the next time they are opened.
+            // The window is never destroyed: X hides it to the tray, and the
+            // bots keep running until 結束 in the tray menu.
             if let WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
                 let _ = window.hide();
@@ -81,8 +82,6 @@ pub fn run() {
             commands::get_host_autostart,
             commands::set_host_autostart,
             commands::open_logs_dir,
-            commands::open_window,
-            commands::take_route,
             commands::config_path,
         ])
         .build(tauri::generate_context!())

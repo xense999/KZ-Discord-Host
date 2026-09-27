@@ -1,12 +1,12 @@
 [package]
-name = "kz-bot-host"
+name = "kz-discord-host"
 version = "0.1.0"
-description = "KZ Bot Host - Discord bot supervisor living in the Windows tray"
+description = "KZ Discord Host - keeps Discord bots running from the Windows tray"
 authors = ["scorp"]
 edition = "2021"
 
 [lib]
-name = "kz_bot_host_lib"
+name = "kz_discord_host_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
@@ -25,6 +25,7 @@ uuid = { version = "1", features = ["v4"] }
 chrono = "0.4"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "process", "io-util", "sync", "time"] }
 thiserror = "2"
+auto-launch = "0.5"
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.62", features = ["Win32_Foundation", "Win32_Globalization", "Win32_Security", "Win32_System_JobObjects", "Win32_System_Threading"] }

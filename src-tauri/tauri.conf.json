@@ -1,11 +1,11 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "KZ Bot Host",
+  "productName": "久世 Discord Host",
   "version": "0.1.0",
-  "identifier": "com.scorp.kz-bot-host",
+  "identifier": "com.scorp.kz-discord-host",
   "build": {
     "beforeDevCommand": "npm run dev",
-    "devUrl": "http://localhost:1420",
+    "devUrl": "http://localhost:1460",
     "beforeBuildCommand": "npm run build",
     "frontendDist": "../dist"
   },
@@ -13,34 +13,13 @@
     "windows": [
       {
         "label": "main",
-        "title": "KZ Bot Host",
-        "width": 480,
-        "height": 640,
-        "resizable": false,
-        "decorations": false,
-        "transparent": true,
-        "shadow": false,
-        "visible": false
-      },
-      {
-        "label": "form",
-        "title": "bot 設定",
-        "width": 520,
-        "height": 660,
+        "title": "久世 Discord Host",
+        "width": 900,
+        "height": 560,
+        "minWidth": 760,
+        "minHeight": 460,
         "center": true,
-        "resizable": false,
-        "decorations": false,
-        "transparent": true,
-        "shadow": false,
-        "visible": false
-      },
-      {
-        "label": "settings",
-        "title": "設定",
-        "width": 440,
-        "height": 480,
-        "center": true,
-        "resizable": false,
+        "resizable": true,
         "decorations": false,
         "transparent": true,
         "shadow": false,

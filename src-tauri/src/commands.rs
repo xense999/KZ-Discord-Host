@@ -84,22 +84,6 @@ pub fn open_logs_dir(app: AppHandle) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
-/// `view`: "form" | "settings"; `query`: e.g. "id=<bot id>" | "import=<dir>".
-#[tauri::command]
-pub fn open_window(app: AppHandle, view: String, query: Option<String>) -> Result<(), String> {
-    if !crate::tray::is_child(&view) {
-        return Err(format!("未知視窗：{view}"));
-    }
-    crate::tray::open_child(&app, &view, query.as_deref().unwrap_or(""));
-    Ok(())
-}
-
-/// The query parked for this window by `open_window` (taken once).
-#[tauri::command]
-pub fn take_route(state: State<'_, AppState>, window: tauri::Window) -> Option<String> {
-    state.routes.lock().unwrap().remove(window.label())
-}
-
 #[tauri::command]
 pub fn config_path() -> String {
     config::config_path().to_string_lossy().to_string()
